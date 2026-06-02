@@ -9,6 +9,7 @@ DEFAULT_API_PREFIX = "/api"
 DEFAULT_API_VERSION = "0.1.0"
 DEFAULT_HOST = "0.0.0.0"
 DEFAULT_PORT = 8000
+DEFAULT_DATABASE_URL = "sqlite:///./letsgosa.db"
 
 
 def _as_bool(value: str | None, default: bool = False) -> bool:
@@ -26,6 +27,7 @@ class Settings:
     api_version: str = DEFAULT_API_VERSION
     host: str = DEFAULT_HOST
     port: int = DEFAULT_PORT
+    database_url: str = DEFAULT_DATABASE_URL
 
     @classmethod
     def from_env(cls) -> "Settings":
@@ -37,6 +39,7 @@ class Settings:
             api_version=os.getenv("LETSGOSA_API_VERSION", DEFAULT_API_VERSION),
             host=os.getenv("LETSGOSA_HOST", DEFAULT_HOST),
             port=int(os.getenv("LETSGOSA_PORT", str(DEFAULT_PORT))),
+            database_url=os.getenv("LETSGOSA_DATABASE_URL", DEFAULT_DATABASE_URL),
         )
 
 

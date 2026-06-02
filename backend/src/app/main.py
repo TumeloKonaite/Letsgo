@@ -1,32 +1,45 @@
+from __future__ import annotations
+
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
 from app.api.router import api_router
 from app.api.routes.health import router as health_router
-from app.core.config import get_settings
+from app.core.config import Settings, get_settings
 from app.domain.packages.service import PackageService
-from app.infrastructure.packages.in_memory_package_repository import (
-    InMemoryPackageRepository,
+from app.infrastructure.database.session import (
+    create_database_engine,
+    create_session_factory,
+    initialize_database,
 )
+from app.infrastructure.packages.postgres_package_repository import PostgresPackageRepository
 
 
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    settings = get_settings()
-    repository = InMemoryPackageRepository()
-    app.state.settings = settings
-    app.state.package_service = PackageService(repository=repository)
-    app.state.started = True
-    yield
+def create_application(settings: Settings | None = None) -> FastAPI:
+    resolved_settings = settings or get_settings()
 
+    @asynccontextmanager
+    async def lifespan(app: FastAPI):
+        engine = create_database_engine(resolved_settings.database_url)
+        session_factory = create_session_factory(engine)
+        initialize_database(engine)
 
-def create_application() -> FastAPI:
-    settings = get_settings()
+        repository = PostgresPackageRepository(session_factory=session_factory)
+        app.state.settings = resolved_settings
+        app.state.db_session_factory = session_factory
+        app.state.package_service = PackageService(repository=repository)
+        app.state.started = True
+
+        try:
+            yield
+        finally:
+            engine.dispose()
+
     application = FastAPI(
-        title=settings.app_name,
-        debug=settings.debug,
-        version=settings.api_version,
+        title=resolved_settings.app_name,
+        debug=resolved_settings.debug,
+        version=resolved_settings.api_version,
         lifespan=lifespan,
     )
     application.include_router(health_router)
