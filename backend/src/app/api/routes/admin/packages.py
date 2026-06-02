@@ -6,52 +6,30 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response,
 from sqlalchemy.orm import Session, sessionmaker
 
 from app.api.schemas.packages import (
-    AdminPackageCreateRequest,
     AdminPackageImageCreateRequest,
     AdminPackageImageResponse,
-    AdminPackagePatchRequest,
     AdminPackagePutRequest,
-    AdminPackageResponse,
+    PackageCreate,
+    PackageResponse,
+    PackageUpdate,
 )
-from app.core.dependencies import require_admin
-from app.domain.auth.models import AuthenticatedUser
+from app.core.dependencies import get_package_service, require_admin
+from app.domain.packages.service import (
+    DuplicatePackageSlugError,
+    PackageNotFoundError,
+    PackageService,
+)
 from app.infrastructure.database.models import Package, PackageImage
 
-router = APIRouter(prefix="/admin/packages", tags=["admin-packages"])
+router = APIRouter(
+    prefix="/admin/packages",
+    tags=["admin-packages"],
+    dependencies=[Depends(require_admin)],
+)
 
 
 def get_session_factory(request: Request) -> sessionmaker[Session]:
     return request.app.state.db_session_factory
-
-
-def _package_to_response(package: Package) -> AdminPackageResponse:
-    return AdminPackageResponse(
-        id=package.id,
-        title=package.title,
-        slug=package.slug,
-        short_description=package.short_description,
-        description=package.description,
-        destination=package.destination,
-        duration_days=package.duration_days,
-        duration_nights=package.duration_nights,
-        price_from=package.price_from,
-        currency=package.currency,
-        is_active=package.is_active,
-        status=package.status,
-        is_published=package.is_published,
-        is_featured=package.is_featured,
-        display_order=package.display_order,
-        images=[
-            AdminPackageImageResponse(
-                id=image.id,
-                image_url=image.image_url,
-                alt_text=image.alt_text,
-                sort_order=image.sort_order,
-                is_cover=image.is_cover,
-            )
-            for image in package.images
-        ],
-    )
 
 
 def _get_package_or_404(session: Session, package_id: int) -> Package:
@@ -64,71 +42,94 @@ def _get_package_or_404(session: Session, package_id: int) -> Package:
     return package
 
 
-def _apply_package_payload(
-    package: Package,
-    payload: AdminPackageCreateRequest | AdminPackagePutRequest | dict[str, object],
-) -> None:
-    data = payload.model_dump() if hasattr(payload, "model_dump") else payload
-    for field_name, value in data.items():
-        setattr(package, field_name, value)
+def _raise_for_package_error(exc: Exception) -> None:
+    if isinstance(exc, DuplicatePackageSlugError):
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Package slug already exists",
+        ) from exc
+    if isinstance(exc, PackageNotFoundError):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Package not found",
+        ) from exc
+    raise exc
 
 
 @router.post(
     "",
-    response_model=AdminPackageResponse,
+    response_model=PackageResponse,
     status_code=status.HTTP_201_CREATED,
 )
 def create_package(
-    payload: AdminPackageCreateRequest,
-    session_factory: Annotated[sessionmaker[Session], Depends(get_session_factory)],
-    current_user: Annotated[AuthenticatedUser, Depends(require_admin)],
-) -> AdminPackageResponse:
-    del current_user
-    with session_factory() as session:
-        package = Package()
-        _apply_package_payload(package, payload)
-        session.add(package)
-        session.commit()
-        session.refresh(package)
-        return _package_to_response(package)
+    payload: PackageCreate,
+    service: Annotated[PackageService, Depends(get_package_service)],
+) -> PackageResponse:
+    try:
+        return service.create_package(payload)
+    except DuplicatePackageSlugError as exc:
+        _raise_for_package_error(exc)
 
 
 @router.put(
     "/{package_id}",
-    response_model=AdminPackageResponse,
+    response_model=PackageResponse,
 )
 def replace_package(
     package_id: int,
     payload: AdminPackagePutRequest,
-    session_factory: Annotated[sessionmaker[Session], Depends(get_session_factory)],
-    current_user: Annotated[AuthenticatedUser, Depends(require_admin)],
-) -> AdminPackageResponse:
-    del current_user
-    with session_factory() as session:
-        package = _get_package_or_404(session, package_id)
-        _apply_package_payload(package, payload)
-        session.commit()
-        session.refresh(package)
-        return _package_to_response(package)
+    service: Annotated[PackageService, Depends(get_package_service)],
+) -> PackageResponse:
+    try:
+        return service.update_package(
+            package_id,
+            PackageUpdate.model_validate(payload.model_dump()),
+        )
+    except (DuplicatePackageSlugError, PackageNotFoundError) as exc:
+        _raise_for_package_error(exc)
 
 
 @router.patch(
     "/{package_id}",
-    response_model=AdminPackageResponse,
+    response_model=PackageResponse,
 )
 def update_package(
     package_id: int,
-    payload: AdminPackagePatchRequest,
-    session_factory: Annotated[sessionmaker[Session], Depends(get_session_factory)],
-    current_user: Annotated[AuthenticatedUser, Depends(require_admin)],
-) -> AdminPackageResponse:
-    del current_user
-    with session_factory() as session:
-        package = _get_package_or_404(session, package_id)
-        _apply_package_payload(package, payload.model_dump(exclude_unset=True))
-        session.commit()
-        session.refresh(package)
-        return _package_to_response(package)
+    payload: PackageUpdate,
+    service: Annotated[PackageService, Depends(get_package_service)],
+) -> PackageResponse:
+    try:
+        return service.update_package(package_id, payload)
+    except (DuplicatePackageSlugError, PackageNotFoundError) as exc:
+        _raise_for_package_error(exc)
+
+
+@router.patch(
+    "/{package_id}/publish",
+    response_model=PackageResponse,
+)
+def publish_package(
+    package_id: int,
+    service: Annotated[PackageService, Depends(get_package_service)],
+) -> PackageResponse:
+    try:
+        return service.publish_package(package_id)
+    except PackageNotFoundError as exc:
+        _raise_for_package_error(exc)
+
+
+@router.patch(
+    "/{package_id}/unpublish",
+    response_model=PackageResponse,
+)
+def unpublish_package(
+    package_id: int,
+    service: Annotated[PackageService, Depends(get_package_service)],
+) -> PackageResponse:
+    try:
+        return service.unpublish_package(package_id)
+    except PackageNotFoundError as exc:
+        _raise_for_package_error(exc)
 
 
 @router.delete(
@@ -137,14 +138,12 @@ def update_package(
 )
 def delete_package(
     package_id: int,
-    session_factory: Annotated[sessionmaker[Session], Depends(get_session_factory)],
-    current_user: Annotated[AuthenticatedUser, Depends(require_admin)],
+    service: Annotated[PackageService, Depends(get_package_service)],
 ) -> Response:
-    del current_user
-    with session_factory() as session:
-        package = _get_package_or_404(session, package_id)
-        session.delete(package)
-        session.commit()
+    try:
+        service.delete_package(package_id)
+    except PackageNotFoundError as exc:
+        _raise_for_package_error(exc)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
@@ -157,9 +156,7 @@ def add_package_image(
     package_id: int,
     payload: AdminPackageImageCreateRequest,
     session_factory: Annotated[sessionmaker[Session], Depends(get_session_factory)],
-    current_user: Annotated[AuthenticatedUser, Depends(require_admin)],
 ) -> AdminPackageImageResponse:
-    del current_user
     with session_factory() as session:
         package = _get_package_or_404(session, package_id)
         image = PackageImage(**payload.model_dump())
@@ -183,9 +180,7 @@ def delete_package_image(
     package_id: int,
     image_id: Annotated[int, Query(gt=0)],
     session_factory: Annotated[sessionmaker[Session], Depends(get_session_factory)],
-    current_user: Annotated[AuthenticatedUser, Depends(require_admin)],
 ) -> Response:
-    del current_user
     with session_factory() as session:
         package = _get_package_or_404(session, package_id)
         image = next((candidate for candidate in package.images if candidate.id == image_id), None)

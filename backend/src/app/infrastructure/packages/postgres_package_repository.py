@@ -1,14 +1,18 @@
 from __future__ import annotations
 
+from typing import Mapping
+
 from sqlalchemy import Select, or_, select
 from sqlalchemy.orm import Session, selectinload, sessionmaker
 
 from app.domain.packages.repository import (
     AvailabilityItemRecord,
     ItineraryItemRecord,
+    PackageCreateData,
     PackageDetailRecord,
     PackageImageRecord,
     PackageListItemRecord,
+    PackageRecord,
 )
 from app.infrastructure.database.models import Package, PackagePublicationStatus
 
@@ -16,6 +20,85 @@ from app.infrastructure.database.models import Package, PackagePublicationStatus
 class PostgresPackageRepository:
     def __init__(self, session_factory: sessionmaker[Session]) -> None:
         self._session_factory = session_factory
+
+    def create(self, package_data: PackageCreateData) -> PackageRecord:
+        with self._session_factory() as session:
+            package = Package(
+                title=package_data.title,
+                slug=package_data.slug,
+                short_description=package_data.short_description,
+                description=package_data.description,
+                destination=package_data.destination,
+                duration_days=package_data.duration_days,
+                duration_nights=package_data.duration_nights,
+                price_from=package_data.price_from,
+                currency=package_data.currency,
+                is_active=package_data.is_active,
+                status=package_data.status,
+                is_published=package_data.is_published,
+                is_featured=package_data.is_featured,
+                display_order=package_data.display_order,
+            )
+            session.add(package)
+            session.commit()
+            session.refresh(package)
+            return self._to_package_record(package)
+
+    def get_by_id(self, package_id: int) -> PackageRecord | None:
+        with self._session_factory() as session:
+            package = session.get(Package, package_id)
+            if package is None:
+                return None
+            return self._to_package_record(package)
+
+    def get_by_slug(self, slug: str) -> PackageRecord | None:
+        with self._session_factory() as session:
+            statement = select(Package).where(Package.slug == slug)
+            package = session.scalars(statement).first()
+            if package is None:
+                return None
+            return self._to_package_record(package)
+
+    def update(self, package_id: int, package_data: Mapping[str, object]) -> PackageRecord | None:
+        with self._session_factory() as session:
+            package = session.get(Package, package_id)
+            if package is None:
+                return None
+
+            for field_name, value in package_data.items():
+                setattr(package, field_name, value)
+
+            session.commit()
+            session.refresh(package)
+            return self._to_package_record(package)
+
+    def publish(self, package_id: int) -> PackageRecord | None:
+        return self.update(
+            package_id,
+            {
+                "status": PackagePublicationStatus.PUBLISHED,
+                "is_published": True,
+            },
+        )
+
+    def unpublish(self, package_id: int) -> PackageRecord | None:
+        return self.update(
+            package_id,
+            {
+                "status": PackagePublicationStatus.DRAFT,
+                "is_published": False,
+            },
+        )
+
+    def delete(self, package_id: int) -> bool:
+        with self._session_factory() as session:
+            package = session.get(Package, package_id)
+            if package is None:
+                return False
+
+            session.delete(package)
+            session.commit()
+            return True
 
     def list_published_packages(self) -> list[PackageListItemRecord]:
         with self._session_factory() as session:
@@ -50,6 +133,25 @@ class PostgresPackageRepository:
                 Package.created_at.desc(),
                 Package.id.desc(),
             )
+        )
+
+    def _to_package_record(self, package: Package) -> PackageRecord:
+        return PackageRecord(
+            id=package.id,
+            title=package.title,
+            slug=package.slug,
+            short_description=package.short_description,
+            description=package.description,
+            destination=package.destination,
+            duration_days=package.duration_days,
+            duration_nights=package.duration_nights,
+            price_from=package.price_from,
+            currency=package.currency,
+            is_active=package.is_active,
+            status=package.status,
+            is_published=package.is_published,
+            is_featured=package.is_featured,
+            display_order=package.display_order,
         )
 
     def _to_list_item(self, package: Package) -> PackageListItemRecord:

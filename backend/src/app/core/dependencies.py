@@ -6,6 +6,8 @@ from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from app.core.config import Settings
+from app.domain.packages.repository import PackageRepository
+from app.domain.packages.service import PackageService
 from app.core.keycloak import (
     KeycloakJWTValidator,
     TokenExpiredError,
@@ -22,6 +24,14 @@ def get_settings(request: Request) -> Settings:
 
 def get_keycloak_auth_service(request: Request) -> KeycloakJWTValidator:
     return request.app.state.keycloak_auth_service
+
+
+def get_package_repository(request: Request) -> PackageRepository:
+    return request.app.state.package_repository
+
+
+def get_package_service(request: Request) -> PackageService:
+    return request.app.state.package_service
 
 
 def get_current_user(
