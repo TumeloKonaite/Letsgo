@@ -79,15 +79,11 @@ class AdminPackageBase(BaseModel):
     display_order: int = Field(default=0, ge=0)
 
 
-class AdminPackageCreateRequest(AdminPackageBase):
+class PackageCreate(AdminPackageBase):
     pass
 
 
-class AdminPackagePutRequest(AdminPackageBase):
-    pass
-
-
-class AdminPackagePatchRequest(BaseModel):
+class PackageUpdate(BaseModel):
     title: str | None = Field(default=None, min_length=1, max_length=200)
     slug: str | None = Field(default=None, min_length=1, max_length=255)
     short_description: str | None = Field(default=None, max_length=500)
@@ -102,6 +98,36 @@ class AdminPackagePatchRequest(BaseModel):
     is_published: bool | None = None
     is_featured: bool | None = None
     display_order: int | None = Field(default=None, ge=0)
+
+
+class PackageResponse(BaseModel):
+    id: int
+    title: str
+    slug: str
+    short_description: str | None = None
+    description: str
+    destination: str
+    duration_days: int
+    duration_nights: int
+    price_from: Decimal
+    currency: str
+    is_active: bool
+    status: PackagePublicationStatus
+    is_published: bool
+    is_featured: bool
+    display_order: int
+
+
+class AdminPackageCreateRequest(PackageCreate):
+    pass
+
+
+class AdminPackagePutRequest(PackageCreate):
+    pass
+
+
+class AdminPackagePatchRequest(PackageUpdate):
+    pass
 
 
 class AdminPackageImageCreateRequest(BaseModel):
@@ -119,20 +145,5 @@ class AdminPackageImageResponse(BaseModel):
     is_cover: bool
 
 
-class AdminPackageResponse(BaseModel):
-    id: int
-    title: str
-    slug: str
-    short_description: str | None = None
-    description: str
-    destination: str
-    duration_days: int
-    duration_nights: int
-    price_from: Decimal
-    currency: str
-    is_active: bool
-    status: PackagePublicationStatus
-    is_published: bool
-    is_featured: bool
-    display_order: int
-    images: list[AdminPackageImageResponse]
+class AdminPackageResponse(PackageResponse):
+    pass

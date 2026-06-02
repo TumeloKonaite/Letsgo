@@ -2,16 +2,13 @@ from __future__ import annotations
 
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, status
 
 from app.api.schemas.packages import PackageDetail, PackageListItem
+from app.core.dependencies import get_package_service
 from app.domain.packages.service import PackageNotFoundError, PackageService
 
 router = APIRouter(prefix="/packages", tags=["packages"])
-
-
-def get_package_service(request: Request) -> PackageService:
-    return request.app.state.package_service
 
 
 @router.get("", response_model=list[PackageListItem])

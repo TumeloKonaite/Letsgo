@@ -30,6 +30,7 @@ def create_application(settings: Settings | None = None) -> FastAPI:
         repository = PostgresPackageRepository(session_factory=session_factory)
         app.state.settings = resolved_settings
         app.state.db_session_factory = session_factory
+        app.state.package_repository = repository
         app.state.package_service = PackageService(repository=repository)
         app.state.keycloak_auth_service = KeycloakJWTValidator(
             issuer=resolved_settings.keycloak_issuer or "",
