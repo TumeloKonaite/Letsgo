@@ -130,18 +130,12 @@ class AdminPackagePatchRequest(PackageUpdate):
     pass
 
 
-class AdminPackageImageCreateRequest(BaseModel):
-    image_url: str = Field(..., min_length=1, max_length=2048)
-    alt_text: str | None = Field(default=None, max_length=255)
-    sort_order: int = Field(default=0, ge=0)
-    is_cover: bool = False
-
-
 class AdminPackageImageResponse(BaseModel):
     id: int
-    image_url: str
+    package_id: int
+    url: str
     alt_text: str | None = None
-    sort_order: int
+    display_order: int
     is_cover: bool
 
 

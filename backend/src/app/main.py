@@ -15,11 +15,13 @@ from app.infrastructure.database.session import (
     initialize_database,
 )
 from app.infrastructure.packages.postgres_package_repository import PostgresPackageRepository
+from app.infrastructure.storage import create_storage_service
 
 
 def create_application(settings: Settings | None = None) -> FastAPI:
     resolved_settings = settings or get_settings()
     resolved_settings.validate_keycloak_configuration()
+    resolved_settings.validate_storage_configuration()
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):
@@ -28,10 +30,12 @@ def create_application(settings: Settings | None = None) -> FastAPI:
         initialize_database(engine)
 
         repository = PostgresPackageRepository(session_factory=session_factory)
+        storage_service = create_storage_service(resolved_settings)
         app.state.settings = resolved_settings
         app.state.db_session_factory = session_factory
         app.state.package_repository = repository
         app.state.package_service = PackageService(repository=repository)
+        app.state.storage_service = storage_service
         app.state.keycloak_auth_service = KeycloakJWTValidator(
             issuer=resolved_settings.keycloak_issuer or "",
             audience=resolved_settings.keycloak_audience or "",

@@ -2,6 +2,7 @@ from datetime import date
 from decimal import Decimal
 
 from sqlalchemy import CheckConstraint
+from sqlalchemy import create_engine, text
 from sqlalchemy import inspect as sa_inspect
 
 from app.infrastructure.database.models import (
@@ -15,6 +16,7 @@ from app.infrastructure.database.models import (
     PackageItineraryItem,
     PackagePublicationStatus,
 )
+from app.infrastructure.database.session import initialize_database
 
 
 def test_models_are_importable_and_registered() -> None:
@@ -139,3 +141,36 @@ def test_package_constraints_cover_public_display_ordering() -> None:
 
     assert "display_order >= 0" in constraints
     assert "sort_order >= 0" in itinerary_constraints
+
+
+def test_initialize_database_adds_storage_key_column_for_existing_tables(tmp_path) -> None:
+    engine = create_engine(f"sqlite:///{tmp_path / 'legacy.db'}")
+
+    with engine.begin() as connection:
+        connection.execute(
+            text(
+                """
+                CREATE TABLE package_images (
+                    id INTEGER PRIMARY KEY,
+                    package_id INTEGER NOT NULL,
+                    image_url VARCHAR(2048) NOT NULL,
+                    alt_text VARCHAR(255),
+                    sort_order INTEGER NOT NULL DEFAULT 0,
+                    is_cover BOOLEAN NOT NULL DEFAULT 0,
+                    created_at DATETIME
+                )
+                """
+            )
+        )
+
+    try:
+        initialize_database(engine)
+
+        columns = {
+            column["name"]
+            for column in sa_inspect(engine).get_columns("package_images")
+        }
+
+        assert "storage_key" in columns
+    finally:
+        engine.dispose()
