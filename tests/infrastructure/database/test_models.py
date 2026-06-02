@@ -13,6 +13,7 @@ from app.infrastructure.database.models import (
     PackageAvailabilityStatus,
     PackageImage,
     PackageItineraryItem,
+    PackagePublicationStatus,
 )
 
 
@@ -26,6 +27,7 @@ def test_models_are_importable_and_registered() -> None:
         "package_availability",
         "bookings",
     }.issubset(Base.metadata.tables.keys())
+    assert PackagePublicationStatus.PUBLISHED.value == "published"
 
 
 def test_package_relationships_are_wired_correctly() -> None:
@@ -43,6 +45,7 @@ def test_package_relationships_are_wired_correctly() -> None:
     image = PackageImage(image_url="https://example.com/cover.jpg", alt_text="Table Mountain")
     itinerary = PackageItineraryItem(
         day_number=1,
+        sort_order=0,
         title="Arrival",
         description="Airport pickup and hotel check-in.",
     )
@@ -119,3 +122,20 @@ def test_availability_constraints_cover_capacity_and_spots() -> None:
     assert "capacity > 0" in constraints
     assert "spots_available >= 0" in constraints
     assert "spots_available <= capacity" in constraints
+
+
+def test_package_constraints_cover_public_display_ordering() -> None:
+    constraints = {
+        str(constraint.sqltext)
+        for constraint in Package.__table__.constraints
+        if isinstance(constraint, CheckConstraint)
+    }
+
+    itinerary_constraints = {
+        str(constraint.sqltext)
+        for constraint in PackageItineraryItem.__table__.constraints
+        if isinstance(constraint, CheckConstraint)
+    }
+
+    assert "display_order >= 0" in constraints
+    assert "sort_order >= 0" in itinerary_constraints

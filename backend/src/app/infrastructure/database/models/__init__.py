@@ -6,6 +6,7 @@ from app.infrastructure.database.models.package import (
     PackageAvailabilityStatus,
     PackageImage,
     PackageItineraryItem,
+    PackagePublicationStatus,
 )
 
 __all__ = [
@@ -17,4 +18,5 @@ __all__ = [
     "PackageAvailabilityStatus",
     "PackageImage",
     "PackageItineraryItem",
+    "PackagePublicationStatus",
 ]

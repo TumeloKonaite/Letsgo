@@ -29,6 +29,12 @@ class PackageAvailabilityStatus(str, Enum):
     CLOSED = "closed"
 
 
+class PackagePublicationStatus(str, Enum):
+    DRAFT = "draft"
+    PUBLISHED = "published"
+    ARCHIVED = "archived"
+
+
 class Package(TimestampMixin, Base):
     __tablename__ = "packages"
 
@@ -43,21 +49,46 @@ class Package(TimestampMixin, Base):
     price_from: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False)
     currency: Mapped[str] = mapped_column(String(3), nullable=False, default="ZAR")
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    status: Mapped[PackagePublicationStatus] = mapped_column(
+        SqlEnum(
+            PackagePublicationStatus,
+            name="package_publication_status",
+            native_enum=False,
+            validate_strings=True,
+        ),
+        nullable=False,
+        default=PackagePublicationStatus.DRAFT,
+        index=True,
+    )
+    is_published: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, index=True)
+    is_featured: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, index=True)
+    display_order: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
 
     images: Mapped[list[PackageImage]] = relationship(
         back_populates="package",
         cascade="all, delete-orphan",
-        order_by="PackageImage.sort_order",
+        order_by=lambda: [
+            PackageImage.is_cover.desc(),
+            PackageImage.sort_order.asc(),
+            PackageImage.id.asc(),
+        ],
     )
     itinerary_items: Mapped[list[PackageItineraryItem]] = relationship(
         back_populates="package",
         cascade="all, delete-orphan",
-        order_by="PackageItineraryItem.day_number",
+        order_by=lambda: [
+            PackageItineraryItem.day_number.asc(),
+            PackageItineraryItem.sort_order.asc(),
+            PackageItineraryItem.id.asc(),
+        ],
     )
     availability_dates: Mapped[list[PackageAvailability]] = relationship(
         back_populates="package",
         cascade="all, delete-orphan",
-        order_by="PackageAvailability.start_date",
+        order_by=lambda: [
+            PackageAvailability.start_date.asc(),
+            PackageAvailability.id.asc(),
+        ],
     )
     bookings: Mapped[list[Booking]] = relationship(
         back_populates="package",
@@ -68,6 +99,7 @@ class Package(TimestampMixin, Base):
         CheckConstraint("duration_days > 0", name="duration_days_positive"),
         CheckConstraint("duration_nights >= 0", name="duration_nights_non_negative"),
         CheckConstraint("price_from >= 0", name="price_from_non_negative"),
+        CheckConstraint("display_order >= 0", name="display_order_non_negative"),
     )
 
 
@@ -103,6 +135,7 @@ class PackageItineraryItem(CreatedAtMixin, Base):
         index=True,
     )
     day_number: Mapped[int] = mapped_column(Integer, nullable=False)
+    sort_order: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     title: Mapped[str] = mapped_column(String(200), nullable=False)
     description: Mapped[str] = mapped_column(Text, nullable=False)
 
@@ -110,7 +143,13 @@ class PackageItineraryItem(CreatedAtMixin, Base):
 
     __table_args__ = (
         CheckConstraint("day_number > 0", name="day_number_positive"),
-        UniqueConstraint("package_id", "day_number", name="uq_package_itinerary_items_package_day"),
+        CheckConstraint("sort_order >= 0", name="sort_order_non_negative"),
+        UniqueConstraint(
+            "package_id",
+            "day_number",
+            "sort_order",
+            name="uq_package_itinerary_items_package_day_sort",
+        ),
     )
 
 
@@ -152,4 +191,3 @@ class PackageAvailability(TimestampMixin, Base):
 
 
 from app.infrastructure.database.models.booking import Booking
-
