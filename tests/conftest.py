@@ -11,10 +11,13 @@ BACKEND_SRC = PROJECT_ROOT / "backend" / "src"
 if str(BACKEND_SRC) not in sys.path:
     sys.path.insert(0, str(BACKEND_SRC))
 
-os.environ.setdefault("KEYCLOAK_SERVER_URL", "https://keycloak.example.com")
-os.environ.setdefault("KEYCLOAK_REALM", "letsgosa")
-os.environ.setdefault("KEYCLOAK_CLIENT_ID", "letsgosa-admin")
+os.environ.setdefault("KEYCLOAK_ISSUER", "https://keycloak.example.com/realms/letsgosa")
 os.environ.setdefault("KEYCLOAK_AUDIENCE", "letsgosa-admin")
+os.environ.setdefault(
+    "KEYCLOAK_JWKS_URL",
+    "https://keycloak.example.com/realms/letsgosa/protocol/openid-connect/certs",
+)
+os.environ.setdefault("KEYCLOAK_ADMIN_ROLE", "admin")
 
 from app.main import app
 

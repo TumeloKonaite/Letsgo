@@ -13,7 +13,7 @@ from app.api.schemas.packages import (
     AdminPackagePutRequest,
     AdminPackageResponse,
 )
-from app.core.auth.dependencies import require_admin
+from app.core.dependencies import require_admin
 from app.domain.auth.models import AuthenticatedUser
 from app.infrastructure.database.models import Package, PackageImage
 
