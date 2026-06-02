@@ -12,6 +12,14 @@ DEFAULT_HOST = "0.0.0.0"
 DEFAULT_PORT = 8000
 DEFAULT_DATABASE_URL = "sqlite:///./letsgosa.db"
 DEFAULT_KEYCLOAK_TIMEOUT_SECONDS = 5.0
+DEFAULT_STORAGE_PROVIDER = "minio"
+DEFAULT_MINIO_ENDPOINT = "localhost:9000"
+DEFAULT_MINIO_ACCESS_KEY = "minioadmin"
+DEFAULT_MINIO_SECRET_KEY = "minioadmin"
+DEFAULT_MINIO_BUCKET = "package-images"
+DEFAULT_MINIO_SECURE = False
+DEFAULT_MINIO_REGION = "us-east-1"
+DEFAULT_PACKAGE_IMAGE_MAX_UPLOAD_BYTES = 5 * 1024 * 1024
 
 
 def _find_dotenv_path() -> Path | None:
@@ -67,6 +75,14 @@ class Settings:
     keycloak_jwks_url: str | None = None
     keycloak_admin_role: str | None = None
     keycloak_timeout_seconds: float = DEFAULT_KEYCLOAK_TIMEOUT_SECONDS
+    storage_provider: str = DEFAULT_STORAGE_PROVIDER
+    minio_endpoint: str = DEFAULT_MINIO_ENDPOINT
+    minio_access_key: str = DEFAULT_MINIO_ACCESS_KEY
+    minio_secret_key: str = DEFAULT_MINIO_SECRET_KEY
+    minio_bucket: str = DEFAULT_MINIO_BUCKET
+    minio_secure: bool = DEFAULT_MINIO_SECURE
+    minio_region: str = DEFAULT_MINIO_REGION
+    package_image_max_upload_bytes: int = DEFAULT_PACKAGE_IMAGE_MAX_UPLOAD_BYTES
 
     @classmethod
     def from_env(cls) -> "Settings":
@@ -90,6 +106,19 @@ class Settings:
                     str(DEFAULT_KEYCLOAK_TIMEOUT_SECONDS),
                 )
             ),
+            storage_provider=os.getenv("STORAGE_PROVIDER", DEFAULT_STORAGE_PROVIDER),
+            minio_endpoint=os.getenv("MINIO_ENDPOINT", DEFAULT_MINIO_ENDPOINT),
+            minio_access_key=os.getenv("MINIO_ACCESS_KEY", DEFAULT_MINIO_ACCESS_KEY),
+            minio_secret_key=os.getenv("MINIO_SECRET_KEY", DEFAULT_MINIO_SECRET_KEY),
+            minio_bucket=os.getenv("MINIO_BUCKET", DEFAULT_MINIO_BUCKET),
+            minio_secure=_as_bool(os.getenv("MINIO_SECURE"), default=DEFAULT_MINIO_SECURE),
+            minio_region=os.getenv("MINIO_REGION", DEFAULT_MINIO_REGION),
+            package_image_max_upload_bytes=int(
+                os.getenv(
+                    "PACKAGE_IMAGE_MAX_UPLOAD_BYTES",
+                    str(DEFAULT_PACKAGE_IMAGE_MAX_UPLOAD_BYTES),
+                )
+            ),
         )
 
     def validate_keycloak_configuration(self) -> None:
@@ -106,6 +135,25 @@ class Settings:
         if missing:
             names = ", ".join(missing)
             raise ValueError(f"Missing required Keycloak configuration: {names}")
+
+    def validate_storage_configuration(self) -> None:
+        provider = self.storage_provider.strip().lower()
+        if provider != "minio":
+            raise ValueError(f"Unsupported storage provider: {self.storage_provider}")
+
+        missing = [
+            name
+            for name, value in (
+                ("MINIO_ENDPOINT", self.minio_endpoint),
+                ("MINIO_ACCESS_KEY", self.minio_access_key),
+                ("MINIO_SECRET_KEY", self.minio_secret_key),
+                ("MINIO_BUCKET", self.minio_bucket),
+            )
+            if not value or not value.strip()
+        ]
+        if missing:
+            names = ", ".join(missing)
+            raise ValueError(f"Missing required storage configuration: {names}")
 
 
 @lru_cache

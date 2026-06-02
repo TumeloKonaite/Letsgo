@@ -112,6 +112,7 @@ class PackageImage(CreatedAtMixin, Base):
         nullable=False,
         index=True,
     )
+    storage_key: Mapped[str | None] = mapped_column(String(1024))
     image_url: Mapped[str] = mapped_column(String(2048), nullable=False)
     alt_text: Mapped[str | None] = mapped_column(String(255))
     sort_order: Mapped[int] = mapped_column(Integer, nullable=False, default=0)

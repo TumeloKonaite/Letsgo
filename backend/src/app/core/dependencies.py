@@ -8,6 +8,7 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from app.core.config import Settings
 from app.domain.packages.repository import PackageRepository
 from app.domain.packages.service import PackageService
+from app.domain.packages.storage import StorageService
 from app.core.keycloak import (
     KeycloakJWTValidator,
     TokenExpiredError,
@@ -32,6 +33,10 @@ def get_package_repository(request: Request) -> PackageRepository:
 
 def get_package_service(request: Request) -> PackageService:
     return request.app.state.package_service
+
+
+def get_storage_service(request: Request) -> StorageService:
+    return request.app.state.storage_service
 
 
 def get_current_user(

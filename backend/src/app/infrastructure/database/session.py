@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from sqlalchemy import Engine, create_engine
+from sqlalchemy import Engine, create_engine, inspect, text
 from sqlalchemy.orm import Session, sessionmaker
 
 from app.infrastructure.database.models import Base
@@ -20,4 +20,19 @@ def create_session_factory(engine: Engine) -> sessionmaker[Session]:
 
 def initialize_database(engine: Engine) -> None:
     Base.metadata.create_all(engine)
+    _ensure_package_image_storage_key_column(engine)
 
+
+def _ensure_package_image_storage_key_column(engine: Engine) -> None:
+    inspector = inspect(engine)
+    if "package_images" not in inspector.get_table_names():
+        return
+
+    existing_columns = {column["name"] for column in inspector.get_columns("package_images")}
+    if "storage_key" in existing_columns:
+        return
+
+    with engine.begin() as connection:
+        connection.execute(
+            text("ALTER TABLE package_images ADD COLUMN storage_key VARCHAR(1024)")
+        )
