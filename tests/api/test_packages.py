@@ -141,10 +141,10 @@ def package_client(tmp_path) -> TestClient:
     application = create_application(
         settings=Settings(
             database_url=database_url,
-            keycloak_server_url="https://keycloak.example.com",
-            keycloak_realm="letsgosa",
-            keycloak_client_id="letsgosa-admin",
+            keycloak_issuer="https://keycloak.example.com/realms/letsgosa",
             keycloak_audience="letsgosa-admin",
+            keycloak_jwks_url="https://keycloak.example.com/realms/letsgosa/protocol/openid-connect/certs",
+            keycloak_admin_role="admin",
         )
     )
 

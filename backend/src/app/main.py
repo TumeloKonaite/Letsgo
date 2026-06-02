@@ -6,7 +6,7 @@ from fastapi import FastAPI
 
 from app.api.router import api_router
 from app.api.routes.health import router as health_router
-from app.core.auth.keycloak import KeycloakJWTValidator
+from app.core.keycloak import KeycloakJWTValidator
 from app.core.config import Settings, get_settings
 from app.domain.packages.service import PackageService
 from app.infrastructure.database.session import (
@@ -32,10 +32,9 @@ def create_application(settings: Settings | None = None) -> FastAPI:
         app.state.db_session_factory = session_factory
         app.state.package_service = PackageService(repository=repository)
         app.state.keycloak_auth_service = KeycloakJWTValidator(
-            server_url=resolved_settings.keycloak_server_url or "",
-            realm=resolved_settings.keycloak_realm or "",
-            client_id=resolved_settings.keycloak_client_id or "",
+            issuer=resolved_settings.keycloak_issuer or "",
             audience=resolved_settings.keycloak_audience or "",
+            jwks_url=resolved_settings.keycloak_jwks_url or "",
             timeout_seconds=resolved_settings.keycloak_timeout_seconds,
         )
         app.state.started = True

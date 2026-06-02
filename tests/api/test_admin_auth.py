@@ -10,17 +10,17 @@ import json
 from fastapi.testclient import TestClient
 import pytest
 
-from app.core.auth.keycloak import KeycloakJWTValidator
+from app.core.keycloak import KeycloakJWTValidator
 from app.core.config import Settings
 from app.infrastructure.database.models import Package, PackageImage
 from app.main import create_application
 
 RS256_DIGEST_INFO_PREFIX = bytes.fromhex("3031300d060960864801650304020105000420")
 TEST_KID = "test-key"
-TEST_SERVER_URL = "https://keycloak.example.com"
-TEST_REALM = "letsgosa"
-TEST_CLIENT_ID = "letsgosa-admin"
+TEST_ISSUER = "https://keycloak.example.com/realms/letsgosa"
+TEST_JWKS_URL = "https://keycloak.example.com/realms/letsgosa/protocol/openid-connect/certs"
 TEST_AUDIENCE = "letsgosa-admin"
+TEST_ADMIN_ROLE = "admin"
 TEST_JWK = {
     "kty": "RSA",
     "use": "sig",
@@ -48,6 +48,11 @@ def _base64url_decode_int(value: str) -> int:
     return int.from_bytes(__import__("base64").urlsafe_b64decode(f"{value}{padding}"), "big")
 
 
+def _base64url_decode_bytes(value: str) -> bytes:
+    padding = "=" * ((4 - len(value) % 4) % 4)
+    return __import__("base64").urlsafe_b64decode(f"{value}{padding}")
+
+
 def _sign_rs256(signing_input: bytes) -> bytes:
     modulus = _base64url_decode_int(TEST_JWK["n"])
     private_exponent = _base64url_decode_int(TEST_PRIVATE_EXPONENT)
@@ -69,7 +74,7 @@ def _build_token(
 ) -> str:
     now = datetime.now(tz=UTC)
     payload = {
-        "iss": f"{TEST_SERVER_URL}/realms/{TEST_REALM}",
+        "iss": TEST_ISSUER,
         "sub": "admin-user-1",
         "aud": audience,
         "exp": int((expires_at or (now + timedelta(minutes=5))).timestamp()),
@@ -90,12 +95,21 @@ def _build_token(
     return f"{header_segment}.{payload_segment}.{signature_segment}"
 
 
+def _tamper_token_signature(token: str) -> str:
+    header_segment, payload_segment, signature_segment = token.split(".")
+    tampered_signature = bytearray(_base64url_decode_bytes(signature_segment))
+    tampered_signature[0] ^= 0x01
+    return (
+        f"{header_segment}.{payload_segment}."
+        f"{_base64url_encode(bytes(tampered_signature))}"
+    )
+
+
 def _build_auth_service() -> KeycloakJWTValidator:
     return KeycloakJWTValidator(
-        server_url=TEST_SERVER_URL,
-        realm=TEST_REALM,
-        client_id=TEST_CLIENT_ID,
+        issuer=TEST_ISSUER,
         audience=TEST_AUDIENCE,
+        jwks_url=TEST_JWKS_URL,
         jwks_fetcher=lambda _: {"keys": [TEST_JWK]},
     )
 
@@ -133,10 +147,10 @@ def admin_client(tmp_path) -> SeededAdminClient:
     application = create_application(
         settings=Settings(
             database_url=database_url,
-            keycloak_server_url=TEST_SERVER_URL,
-            keycloak_realm=TEST_REALM,
-            keycloak_client_id=TEST_CLIENT_ID,
+            keycloak_issuer=TEST_ISSUER,
             keycloak_audience=TEST_AUDIENCE,
+            keycloak_jwks_url=TEST_JWKS_URL,
+            keycloak_admin_role=TEST_ADMIN_ROLE,
         )
     )
 
@@ -226,8 +240,7 @@ def test_missing_token_returns_401_for_all_admin_package_mutations(
 
 
 def test_invalid_token_returns_401(admin_client: SeededAdminClient) -> None:
-    valid_token = _build_token(roles=["admin"])
-    invalid_token = f"{valid_token[:-1]}{'A' if valid_token[-1] != 'A' else 'B'}"
+    invalid_token = _tamper_token_signature(_build_token(roles=["admin"]))
 
     response = admin_client.client.post(
         "/api/admin/packages",
@@ -324,6 +337,6 @@ def test_application_fails_fast_when_keycloak_configuration_is_missing(tmp_path)
 
     with pytest.raises(
         ValueError,
-        match="Missing required Keycloak configuration: KEYCLOAK_SERVER_URL, KEYCLOAK_REALM, KEYCLOAK_CLIENT_ID, KEYCLOAK_AUDIENCE",
+        match="Missing required Keycloak configuration: KEYCLOAK_ISSUER, KEYCLOAK_AUDIENCE, KEYCLOAK_JWKS_URL, KEYCLOAK_ADMIN_ROLE",
     ):
         create_application(settings=Settings(database_url=database_url))
