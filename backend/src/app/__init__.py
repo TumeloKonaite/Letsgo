@@ -1,0 +1,1 @@
+"""LetsGoSA backend application package."""
