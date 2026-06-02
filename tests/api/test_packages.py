@@ -138,7 +138,15 @@ def seed_packages(session_factory) -> None:
 @pytest.fixture
 def package_client(tmp_path) -> TestClient:
     database_url = f"sqlite:///{tmp_path / 'packages.db'}"
-    application = create_application(settings=Settings(database_url=database_url))
+    application = create_application(
+        settings=Settings(
+            database_url=database_url,
+            keycloak_server_url="https://keycloak.example.com",
+            keycloak_realm="letsgosa",
+            keycloak_client_id="letsgosa-admin",
+            keycloak_audience="letsgosa-admin",
+        )
+    )
 
     with TestClient(application) as client:
         seed_packages(application.state.db_session_factory)

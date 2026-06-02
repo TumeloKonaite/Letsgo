@@ -10,6 +10,7 @@ DEFAULT_API_VERSION = "0.1.0"
 DEFAULT_HOST = "0.0.0.0"
 DEFAULT_PORT = 8000
 DEFAULT_DATABASE_URL = "sqlite:///./letsgosa.db"
+DEFAULT_KEYCLOAK_TIMEOUT_SECONDS = 5.0
 
 
 def _as_bool(value: str | None, default: bool = False) -> bool:
@@ -28,6 +29,11 @@ class Settings:
     host: str = DEFAULT_HOST
     port: int = DEFAULT_PORT
     database_url: str = DEFAULT_DATABASE_URL
+    keycloak_server_url: str | None = None
+    keycloak_realm: str | None = None
+    keycloak_client_id: str | None = None
+    keycloak_audience: str | None = None
+    keycloak_timeout_seconds: float = DEFAULT_KEYCLOAK_TIMEOUT_SECONDS
 
     @classmethod
     def from_env(cls) -> "Settings":
@@ -40,7 +46,32 @@ class Settings:
             host=os.getenv("LETSGOSA_HOST", DEFAULT_HOST),
             port=int(os.getenv("LETSGOSA_PORT", str(DEFAULT_PORT))),
             database_url=os.getenv("LETSGOSA_DATABASE_URL", DEFAULT_DATABASE_URL),
+            keycloak_server_url=os.getenv("KEYCLOAK_SERVER_URL"),
+            keycloak_realm=os.getenv("KEYCLOAK_REALM"),
+            keycloak_client_id=os.getenv("KEYCLOAK_CLIENT_ID"),
+            keycloak_audience=os.getenv("KEYCLOAK_AUDIENCE"),
+            keycloak_timeout_seconds=float(
+                os.getenv(
+                    "KEYCLOAK_TIMEOUT_SECONDS",
+                    str(DEFAULT_KEYCLOAK_TIMEOUT_SECONDS),
+                )
+            ),
         )
+
+    def validate_keycloak_configuration(self) -> None:
+        missing = [
+            name
+            for name, value in (
+                ("KEYCLOAK_SERVER_URL", self.keycloak_server_url),
+                ("KEYCLOAK_REALM", self.keycloak_realm),
+                ("KEYCLOAK_CLIENT_ID", self.keycloak_client_id),
+                ("KEYCLOAK_AUDIENCE", self.keycloak_audience),
+            )
+            if value is None or not value.strip()
+        ]
+        if missing:
+            names = ", ".join(missing)
+            raise ValueError(f"Missing required Keycloak configuration: {names}")
 
 
 @lru_cache
