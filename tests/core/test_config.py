@@ -44,3 +44,18 @@ def test_load_dotenv_does_not_override_existing_environment_values(
     config._load_dotenv()
 
     assert config.os.environ["KEYCLOAK_ADMIN_ROLE"] == "super-admin"
+
+
+def test_settings_parse_cors_origins_from_comma_separated_env(monkeypatch) -> None:
+    monkeypatch.setenv(
+        "LETSGOSA_CORS_ALLOW_ORIGINS",
+        "http://localhost:5173, https://letsgosouth.africa ,http://127.0.0.1:4173",
+    )
+
+    settings = config.Settings.from_env()
+
+    assert settings.cors_allow_origins == (
+        "http://localhost:5173",
+        "https://letsgosouth.africa",
+        "http://127.0.0.1:4173",
+    )

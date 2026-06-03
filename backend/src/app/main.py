@@ -3,6 +3,7 @@ from __future__ import annotations
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.router import api_router
 from app.api.routes.health import router as health_router
@@ -60,6 +61,14 @@ def create_application(settings: Settings | None = None) -> FastAPI:
         version=resolved_settings.api_version,
         lifespan=lifespan,
     )
+    if resolved_settings.cors_allow_origins:
+        application.add_middleware(
+            CORSMiddleware,
+            allow_origins=list(resolved_settings.cors_allow_origins),
+            allow_credentials=False,
+            allow_methods=["*"],
+            allow_headers=["*"],
+        )
     application.include_router(health_router)
     application.include_router(api_router)
     return application

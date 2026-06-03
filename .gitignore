@@ -5,6 +5,12 @@ build/
 dist/
 wheels/
 *.egg-info
+node_modules/
+frontend/build/
+frontend/.npm-cache/
+.pytest_tmp/
+.pytest_cache_local/
 
 # Virtual environments
 .venv
+.env

@@ -1,0 +1,244 @@
+import { Link, useParams } from "react-router-dom";
+import { useEffect, useState } from "react";
+
+import { SectionHeading } from "../components/SectionHeading";
+import { StatusPanel } from "../components/StatusPanel";
+import { getPackageBySlug } from "../lib/api";
+import {
+  formatAvailabilityStatus,
+  formatCurrency,
+  formatDateRange,
+} from "../lib/formatters";
+
+export function PackageDetailPage() {
+  const { slug } = useParams();
+  const [packageDetail, setPackageDetail] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function loadPackage() {
+      try {
+        const payload = await getPackageBySlug(slug);
+        if (isMounted) {
+          setPackageDetail(payload);
+          setError("");
+        }
+      } catch (requestError) {
+        if (isMounted) {
+          setError(requestError.message);
+        }
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
+      }
+    }
+
+    loadPackage();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [slug]);
+
+  if (loading) {
+    return (
+      <main className="page">
+        <div className="container">
+          <StatusPanel
+            title="Loading package details"
+            message="Fetching the itinerary, gallery, and availability for this trip."
+          />
+        </div>
+      </main>
+    );
+  }
+
+  if (error) {
+    return (
+      <main className="page">
+        <div className="container">
+          <StatusPanel
+            title="Package details unavailable"
+            message={error}
+            tone="error"
+            action={
+              <Link className="button" to="/packages">
+                Back to packages
+              </Link>
+            }
+          />
+        </div>
+      </main>
+    );
+  }
+
+  if (!packageDetail) {
+    return null;
+  }
+
+  const heroStyle = packageDetail.hero_image_url
+    ? {
+        backgroundImage: `linear-gradient(180deg, rgba(16, 23, 34, 0.16), rgba(16, 23, 34, 0.68)), url("${packageDetail.hero_image_url}")`,
+      }
+    : undefined;
+
+  return (
+    <main className="page">
+      <div className="container">
+        <section className="package-detail__header fade-up">
+          <div className="package-detail__summary">
+            <span className="eyebrow-dark">Package details</span>
+            <h1>{packageDetail.title}</h1>
+            <div className="package-highlight">
+              {packageDetail.location} - {packageDetail.duration_days} days
+            </div>
+            <p>{packageDetail.short_description || packageDetail.full_description}</p>
+            <p>
+              From{" "}
+              <strong>
+                {formatCurrency(packageDetail.price_from, packageDetail.currency)}
+              </strong>
+            </p>
+            <div className="hero__actions">
+              <Link className="button" to="/packages">
+                View all packages
+              </Link>
+            </div>
+          </div>
+
+          <div className="package-detail__hero" style={heroStyle} />
+        </section>
+
+        <section className="section">
+          <div className="detail-grid">
+            <article className="detail-panel fade-up">
+              <h3>Overview</h3>
+              {packageDetail.full_description
+                .split(/\n+/)
+                .filter(Boolean)
+                .map((paragraph, index) => (
+                  <p key={`${index}-${paragraph}`}>{paragraph}</p>
+                ))}
+            </article>
+
+            <article className="detail-panel fade-up">
+              <h3>Trip snapshot</h3>
+              <ul>
+                <li>Destination: {packageDetail.location}</li>
+                <li>Duration: {packageDetail.duration_days} days</li>
+                <li>Currency: {packageDetail.currency}</li>
+                <li>
+                  Featured package: {packageDetail.is_featured ? "Yes" : "No"}
+                </li>
+              </ul>
+            </article>
+          </div>
+        </section>
+
+        <section className="section">
+          <SectionHeading
+            eyebrow="Itinerary"
+            title="Day-by-day breakdown"
+            description="Loaded from `GET /api/packages/{slug}`."
+          />
+
+          <div className="detail-grid">
+            {packageDetail.itinerary.length > 0 ? (
+              packageDetail.itinerary.map((item) => (
+                <article className="detail-panel fade-up" key={item.id}>
+                  <span className="eyebrow-dark">Day {item.day_number}</span>
+                  <h3>{item.title}</h3>
+                  <p>{item.description}</p>
+                </article>
+              ))
+            ) : (
+              <StatusPanel
+                title="No itinerary published"
+                message="This package does not have itinerary entries yet."
+                tone="empty"
+              />
+            )}
+          </div>
+        </section>
+
+        <section className="section">
+          <SectionHeading
+            eyebrow="Availability"
+            title="Upcoming dates"
+            description="Visitors can review current date windows and available spots before enquiring."
+          />
+
+          {packageDetail.availability.length > 0 ? (
+            <div className="availability-grid">
+              {packageDetail.availability.map((availability) => {
+                const status = formatAvailabilityStatus(
+                  availability.status,
+                  availability.spots_available
+                );
+
+                return (
+                  <article className="availability-card fade-up" key={availability.id}>
+                    <span
+                      className={`availability-badge availability-badge--${status.tone}`}
+                    >
+                      {status.label}
+                    </span>
+                    <h3>{formatDateRange(availability.start_date, availability.end_date)}</h3>
+                    <p>
+                      {availability.spots_available} spots left out of{" "}
+                      {availability.capacity}
+                    </p>
+                    <div className="availability-card__meta">
+                      <span>Starts {availability.start_date}</span>
+                      <span>Ends {availability.end_date}</span>
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
+          ) : (
+            <StatusPanel
+              title="No dates published"
+              message="Availability windows have not been added for this package yet."
+              tone="empty"
+            />
+          )}
+        </section>
+
+        <section className="section">
+          <SectionHeading
+            eyebrow="Gallery"
+            title="Package images"
+            description="Cover and supporting images from the backend are surfaced here when available."
+          />
+
+          {packageDetail.images.length > 0 ? (
+            <div className="gallery-grid">
+              {packageDetail.images.map((image) => (
+                <div
+                  key={image.id}
+                  className="gallery-tile fade-up"
+                  style={{
+                    backgroundImage: `linear-gradient(180deg, rgba(16, 23, 34, 0.1), rgba(16, 23, 34, 0.48)), url("${image.image_url}")`,
+                  }}
+                  aria-label={image.alt_text || packageDetail.title}
+                  role="img"
+                />
+              ))}
+            </div>
+          ) : (
+            <StatusPanel
+              title="No gallery images"
+              message="This package currently has no published gallery items."
+              tone="empty"
+            />
+          )}
+        </section>
+      </div>
+    </main>
+  );
+}
