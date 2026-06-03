@@ -6,6 +6,8 @@ from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from app.core.config import Settings
+from app.domain.bookings.repository import BookingRepository
+from app.domain.bookings.service import BookingService
 from app.domain.packages.repository import PackageRepository
 from app.domain.packages.service import PackageService
 from app.domain.packages.storage import StorageService
@@ -33,6 +35,14 @@ def get_package_repository(request: Request) -> PackageRepository:
 
 def get_package_service(request: Request) -> PackageService:
     return request.app.state.package_service
+
+
+def get_booking_repository(request: Request) -> BookingRepository:
+    return request.app.state.booking_repository
+
+
+def get_booking_service(request: Request) -> BookingService:
+    return request.app.state.booking_service
 
 
 def get_storage_service(request: Request) -> StorageService:

@@ -101,7 +101,7 @@ def test_booking_references_package_and_optional_availability() -> None:
         customer_phone="+27 82 000 0000",
         number_of_people=2,
         special_requests="Vegetarian meals",
-        status=BookingStatus.PENDING,
+        status=BookingStatus.NEW,
     )
 
     package.availability_dates.append(availability)
@@ -172,5 +172,60 @@ def test_initialize_database_adds_storage_key_column_for_existing_tables(tmp_pat
         }
 
         assert "storage_key" in columns
+    finally:
+        engine.dispose()
+
+
+def test_initialize_database_migrates_legacy_booking_status_values(tmp_path) -> None:
+    engine = create_engine(f"sqlite:///{tmp_path / 'legacy-bookings.db'}")
+
+    with engine.begin() as connection:
+        connection.execute(
+            text(
+                """
+                CREATE TABLE bookings (
+                    id INTEGER PRIMARY KEY,
+                    package_id INTEGER NOT NULL,
+                    availability_id INTEGER,
+                    customer_name VARCHAR(255) NOT NULL,
+                    customer_email VARCHAR(320) NOT NULL,
+                    customer_phone VARCHAR(50) NOT NULL,
+                    number_of_people INTEGER NOT NULL,
+                    special_requests TEXT,
+                    status VARCHAR(50) NOT NULL,
+                    created_at DATETIME,
+                    updated_at DATETIME
+                )
+                """
+            )
+        )
+        connection.execute(
+            text(
+                """
+                INSERT INTO bookings (
+                    package_id,
+                    availability_id,
+                    customer_name,
+                    customer_email,
+                    customer_phone,
+                    number_of_people,
+                    special_requests,
+                    status
+                ) VALUES
+                    (1, NULL, 'Legacy Pending', 'pending@example.com', '+27 11 000 0000', 2, NULL, 'pending'),
+                    (1, NULL, 'Legacy Rejected', 'rejected@example.com', '+27 11 000 0001', 1, NULL, 'rejected')
+                """
+            )
+        )
+
+    try:
+        initialize_database(engine)
+
+        with engine.connect() as connection:
+            rows = connection.execute(
+                text("SELECT status FROM bookings ORDER BY id ASC")
+            ).scalars().all()
+
+        assert rows == ["new", "closed"]
     finally:
         engine.dispose()
