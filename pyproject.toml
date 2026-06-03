@@ -23,6 +23,8 @@ dev = [
 ]
 
 [tool.pytest.ini_options]
+addopts = "--basetemp=.pytest_tmp"
+cache_dir = ".pytest_cache_local"
 testpaths = ["tests"]
 
 [dependency-groups]

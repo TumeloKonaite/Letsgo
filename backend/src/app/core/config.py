@@ -20,6 +20,10 @@ DEFAULT_MINIO_BUCKET = "package-images"
 DEFAULT_MINIO_SECURE = False
 DEFAULT_MINIO_REGION = "us-east-1"
 DEFAULT_PACKAGE_IMAGE_MAX_UPLOAD_BYTES = 5 * 1024 * 1024
+DEFAULT_CORS_ALLOW_ORIGINS = (
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+)
 
 
 def _find_dotenv_path() -> Path | None:
@@ -60,6 +64,14 @@ def _as_bool(value: str | None, default: bool = False) -> bool:
     return value.strip().lower() in {"1", "true", "yes", "on"}
 
 
+def _as_csv(value: str | None, default: tuple[str, ...] = ()) -> tuple[str, ...]:
+    if value is None:
+        return default
+
+    items = tuple(item.strip() for item in value.split(",") if item.strip())
+    return items
+
+
 @dataclass(frozen=True, slots=True)
 class Settings:
     app_name: str = DEFAULT_APP_NAME
@@ -83,6 +95,7 @@ class Settings:
     minio_secure: bool = DEFAULT_MINIO_SECURE
     minio_region: str = DEFAULT_MINIO_REGION
     package_image_max_upload_bytes: int = DEFAULT_PACKAGE_IMAGE_MAX_UPLOAD_BYTES
+    cors_allow_origins: tuple[str, ...] = DEFAULT_CORS_ALLOW_ORIGINS
 
     @classmethod
     def from_env(cls) -> "Settings":
@@ -118,6 +131,10 @@ class Settings:
                     "PACKAGE_IMAGE_MAX_UPLOAD_BYTES",
                     str(DEFAULT_PACKAGE_IMAGE_MAX_UPLOAD_BYTES),
                 )
+            ),
+            cors_allow_origins=_as_csv(
+                os.getenv("LETSGOSA_CORS_ALLOW_ORIGINS"),
+                default=DEFAULT_CORS_ALLOW_ORIGINS,
             ),
         )
 
