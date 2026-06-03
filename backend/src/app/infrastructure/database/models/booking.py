@@ -10,10 +10,11 @@ from app.infrastructure.database.models.base import Base, TimestampMixin
 
 
 class BookingStatus(str, Enum):
-    PENDING = "pending"
+    NEW = "new"
+    CONTACTED = "contacted"
     CONFIRMED = "confirmed"
     CANCELLED = "cancelled"
-    REJECTED = "rejected"
+    CLOSED = "closed"
 
 
 class Booking(TimestampMixin, Base):
@@ -42,7 +43,7 @@ class Booking(TimestampMixin, Base):
             validate_strings=True,
         ),
         nullable=False,
-        default=BookingStatus.PENDING,
+        default=BookingStatus.NEW,
         index=True,
     )
 
@@ -55,4 +56,3 @@ class Booking(TimestampMixin, Base):
 
 
 from app.infrastructure.database.models.package import Package, PackageAvailability
-

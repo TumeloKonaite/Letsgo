@@ -8,7 +8,9 @@ from app.api.router import api_router
 from app.api.routes.health import router as health_router
 from app.core.keycloak import KeycloakJWTValidator
 from app.core.config import Settings, get_settings
+from app.domain.bookings.service import BookingService
 from app.domain.packages.service import PackageService
+from app.infrastructure.bookings import PostgresBookingRepository
 from app.infrastructure.database.session import (
     create_database_engine,
     create_session_factory,
@@ -29,12 +31,15 @@ def create_application(settings: Settings | None = None) -> FastAPI:
         session_factory = create_session_factory(engine)
         initialize_database(engine)
 
-        repository = PostgresPackageRepository(session_factory=session_factory)
+        package_repository = PostgresPackageRepository(session_factory=session_factory)
+        booking_repository = PostgresBookingRepository(session_factory=session_factory)
         storage_service = create_storage_service(resolved_settings)
         app.state.settings = resolved_settings
         app.state.db_session_factory = session_factory
-        app.state.package_repository = repository
-        app.state.package_service = PackageService(repository=repository)
+        app.state.package_repository = package_repository
+        app.state.package_service = PackageService(repository=package_repository)
+        app.state.booking_repository = booking_repository
+        app.state.booking_service = BookingService(repository=booking_repository)
         app.state.storage_service = storage_service
         app.state.keycloak_auth_service = KeycloakJWTValidator(
             issuer=resolved_settings.keycloak_issuer or "",
