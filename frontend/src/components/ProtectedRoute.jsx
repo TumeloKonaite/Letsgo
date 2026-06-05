@@ -3,7 +3,7 @@ import { Navigate, Outlet, useLocation } from "react-router-dom";
 import { useAuth } from "../auth/AuthProvider";
 import { StatusPanel } from "./StatusPanel";
 
-export function ProtectedRoute() {
+export function ProtectedRoute({ children }) {
   const location = useLocation();
   const { isReady, isAuthenticated, error, isConfigured } = useAuth();
 
@@ -45,5 +45,5 @@ export function ProtectedRoute() {
     );
   }
 
-  return <Outlet />;
+  return children ?? <Outlet />;
 }

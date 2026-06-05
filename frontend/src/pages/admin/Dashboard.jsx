@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 
+import { getAdminPackages } from "../../api/adminPackagesApi";
 import { useAuth } from "../../auth/AuthProvider";
 import { SectionHeading } from "../../components/SectionHeading";
 import { StatusPanel } from "../../components/StatusPanel";
-import { getAdminPackages, getCurrentAdmin } from "../../lib/adminApi";
+import { getCurrentAdmin } from "../../lib/adminApi";
 import { formatCurrency } from "../../lib/formatters";
 
 function formatStatusLabel(status) {
@@ -70,6 +72,9 @@ export function Dashboard() {
               </div>
 
               <div className="hero__actions admin-toolbar__actions">
+                <Link className="button" to="/admin/packages">
+                  Open package dashboard
+                </Link>
                 <button className="button-secondary" type="button" onClick={() => logout("/")}>
                   Log out
                 </button>

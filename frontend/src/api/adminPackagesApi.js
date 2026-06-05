@@ -1,6 +1,6 @@
-import { apiBaseUrl } from "./api";
+import { apiBaseUrl } from "../lib/api";
 
-async function adminRequest(path, getAccessToken, options = {}) {
+async function adminPackagesRequest(path, getAccessToken, options = {}) {
   const accessToken = await getAccessToken();
   const response = await fetch(`${apiBaseUrl}${path}`, {
     ...options,
@@ -13,7 +13,7 @@ async function adminRequest(path, getAccessToken, options = {}) {
   });
 
   if (!response.ok) {
-    let message = "Admin request failed.";
+    let message = "Admin package request failed.";
 
     try {
       const payload = await response.json();
@@ -40,6 +40,24 @@ async function adminRequest(path, getAccessToken, options = {}) {
   return response.json();
 }
 
-export function getCurrentAdmin(getAccessToken) {
-  return adminRequest("/api/admin/auth/me", getAccessToken);
+export function getAdminPackages(getAccessToken) {
+  return adminPackagesRequest("/api/admin/packages", getAccessToken);
+}
+
+export function deletePackage(id, getAccessToken) {
+  return adminPackagesRequest(`/api/admin/packages/${id}`, getAccessToken, {
+    method: "DELETE",
+  });
+}
+
+export function publishPackage(id, getAccessToken) {
+  return adminPackagesRequest(`/api/admin/packages/${id}/publish`, getAccessToken, {
+    method: "PATCH",
+  });
+}
+
+export function unpublishPackage(id, getAccessToken) {
+  return adminPackagesRequest(`/api/admin/packages/${id}/unpublish`, getAccessToken, {
+    method: "PATCH",
+  });
 }
