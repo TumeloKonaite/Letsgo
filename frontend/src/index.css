@@ -760,6 +760,100 @@ img {
   color: var(--ink);
 }
 
+.package-form {
+  display: grid;
+  gap: 1.4rem;
+  padding: 1.5rem;
+  border: 1px solid var(--line);
+  border-radius: 28px;
+  background: rgba(255, 255, 255, 0.8);
+  box-shadow: var(--shadow);
+}
+
+.package-form__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem 1.2rem;
+}
+
+.package-form__field {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.package-form__field--full {
+  grid-column: 1 / -1;
+}
+
+.package-form__field span,
+.package-form__toggle span {
+  font-weight: 600;
+}
+
+.package-form__field input,
+.package-form__field textarea,
+.package-form__field select {
+  width: 100%;
+  padding: 0.85rem 0.95rem;
+  border: 1px solid rgba(16, 23, 34, 0.14);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.94);
+  color: var(--ink);
+}
+
+.package-form__field textarea {
+  resize: vertical;
+}
+
+.package-form__field input:focus,
+.package-form__field textarea:focus,
+.package-form__field select:focus {
+  outline: 2px solid rgba(244, 180, 0, 0.28);
+  border-color: rgba(244, 180, 0, 0.6);
+}
+
+.package-form__field input[aria-invalid="true"],
+.package-form__field textarea[aria-invalid="true"],
+.package-form__field select[aria-invalid="true"] {
+  border-color: rgba(143, 59, 43, 0.48);
+  background: rgba(255, 247, 245, 0.98);
+}
+
+.package-form__field-error {
+  margin: 0;
+  color: #8f3b2b;
+  font-size: 0.9rem;
+}
+
+.package-form__toggles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 0.9rem;
+}
+
+.package-form__toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 1rem;
+  border: 1px solid rgba(16, 23, 34, 0.1);
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.package-form__toggle input {
+  width: 18px;
+  height: 18px;
+}
+
+.package-form__notice {
+  padding: 0.95rem 1rem;
+  border-radius: 18px;
+  background: rgba(244, 180, 0, 0.12);
+  color: var(--clay);
+  font-weight: 700;
+}
+
 .package-detail__header {
   display: grid;
   grid-template-columns: minmax(0, 1.15fr) minmax(300px, 0.85fr);
@@ -890,6 +984,7 @@ img {
   .hero__grid,
   .about-grid,
   .package-detail__header,
+  .package-form__grid,
   .detail-grid,
   .admin-toolbar,
   .admin-package-card__header,
