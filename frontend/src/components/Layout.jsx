@@ -1,6 +1,8 @@
 import { NavLink, Outlet, useLocation } from "react-router-dom";
 import { useEffect } from "react";
 
+import { useAuth } from "../auth/AuthProvider";
+
 function ScrollManager() {
   const location = useLocation();
 
@@ -20,6 +22,8 @@ function ScrollManager() {
 }
 
 export function Layout() {
+  const { isAuthenticated } = useAuth();
+
   return (
     <div className="site-shell">
       <ScrollManager />
@@ -41,6 +45,9 @@ export function Layout() {
             </a>
             <NavLink className="site-nav__link" to="/packages">
               Packages
+            </NavLink>
+            <NavLink className="site-nav__link" to={isAuthenticated ? "/admin/dashboard" : "/admin/login"}>
+              Admin
             </NavLink>
             <a className="site-nav__link" href="/#contact">
               Contact
