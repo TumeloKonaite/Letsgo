@@ -39,12 +39,14 @@ function buildErrorMessage(payload, fallbackMessage) {
 
 async function adminPackagesRequest(path, getAccessToken, options = {}) {
   const accessToken = await getAccessToken();
+  const isMultipartBody =
+    typeof FormData !== "undefined" && options.body instanceof FormData;
   const response = await fetch(`${apiBaseUrl}${path}`, {
     ...options,
     headers: {
       Accept: "application/json",
       Authorization: `Bearer ${accessToken}`,
-      ...(options.body ? { "Content-Type": "application/json" } : {}),
+      ...(options.body && !isMultipartBody ? { "Content-Type": "application/json" } : {}),
       ...options.headers,
     },
   });
@@ -100,6 +102,27 @@ export function updatePackage(id, payload, getAccessToken) {
     method: "PATCH",
     body: JSON.stringify(payload),
   });
+}
+
+export function getAdminPackageImages(packageId, getAccessToken) {
+  return adminPackagesRequest(`/api/admin/packages/${packageId}/images`, getAccessToken);
+}
+
+export function uploadAdminPackageImage(packageId, formData, getAccessToken) {
+  return adminPackagesRequest(`/api/admin/packages/${packageId}/images`, getAccessToken, {
+    method: "POST",
+    body: formData,
+  });
+}
+
+export function deleteAdminPackageImage(packageId, imageId, getAccessToken) {
+  return adminPackagesRequest(
+    `/api/admin/packages/${packageId}/images/${imageId}`,
+    getAccessToken,
+    {
+      method: "DELETE",
+    }
+  );
 }
 
 export function deletePackage(id, getAccessToken) {

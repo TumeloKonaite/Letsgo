@@ -854,6 +854,106 @@ img {
   font-weight: 700;
 }
 
+.package-form__images {
+  display: grid;
+  gap: 1rem;
+  padding-top: 0.4rem;
+  border-top: 1px solid rgba(16, 23, 34, 0.08);
+}
+
+.package-form__images-header {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.package-form__images-header h2,
+.package-form__images-subheading {
+  margin: 0;
+}
+
+.package-form__images-header p,
+.package-form__images-help,
+.package-form__images-empty {
+  margin: 0;
+  color: var(--ink-soft);
+  line-height: 1.65;
+}
+
+.package-form__images-subheading {
+  font-weight: 700;
+}
+
+.package-form__upload {
+  display: grid;
+  gap: 0.55rem;
+  padding: 1rem;
+  border: 1px dashed rgba(16, 23, 34, 0.18);
+  border-radius: 22px;
+  background:
+    linear-gradient(135deg, rgba(244, 180, 0, 0.08), rgba(255, 255, 255, 0.92)),
+    rgba(255, 255, 255, 0.78);
+}
+
+.package-form__upload span {
+  font-weight: 700;
+}
+
+.package-form__upload input {
+  width: 100%;
+}
+
+.package-image-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1rem;
+}
+
+.package-image-card {
+  display: grid;
+  gap: 0.9rem;
+  padding: 0.9rem;
+  border: 1px solid rgba(16, 23, 34, 0.1);
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.84);
+}
+
+.package-image-card--pending {
+  opacity: 0.76;
+  background: rgba(255, 248, 238, 0.96);
+  border-color: rgba(143, 59, 43, 0.2);
+}
+
+.package-image-card__media {
+  overflow: hidden;
+  aspect-ratio: 4 / 3;
+  border-radius: 18px;
+  background: rgba(16, 23, 34, 0.06);
+}
+
+.package-image-card__media img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.package-image-card__body,
+.package-image-card__meta {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.package-image-card__meta span {
+  color: var(--ink-soft);
+  font-size: 0.92rem;
+  word-break: break-word;
+}
+
+.package-image-card__action {
+  width: 100%;
+}
+
 .package-detail__header {
   display: grid;
   grid-template-columns: minmax(0, 1.15fr) minmax(300px, 0.85fr);

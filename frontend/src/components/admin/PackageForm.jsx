@@ -170,13 +170,68 @@ function FieldError({ message }) {
   return <p className="package-form__field-error">{message}</p>;
 }
 
+function ImagePreviewTile({
+  image,
+  label,
+  removeLabel,
+  onRemove,
+  isQueued = false,
+  isPendingRemoval = false,
+  onRestore,
+}) {
+  const previewUrl = isQueued ? image.previewUrl : image.url;
+  const altText = image.alt_text || image.name || label;
+
+  return (
+    <article className={`package-image-card${isPendingRemoval ? " package-image-card--pending" : ""}`}>
+      <div className="package-image-card__media">
+        <img src={previewUrl} alt={altText} />
+      </div>
+
+      <div className="package-image-card__body">
+        <div className="package-image-card__meta">
+          <strong>{label}</strong>
+          <span>{altText}</span>
+        </div>
+
+        {isPendingRemoval ? (
+          <button
+            className="button-secondary admin-action package-image-card__action"
+            type="button"
+            onClick={onRestore}
+          >
+            Restore
+          </button>
+        ) : (
+          <button
+            className="button-secondary admin-action admin-action--danger package-image-card__action"
+            type="button"
+            onClick={onRemove}
+          >
+            {removeLabel}
+          </button>
+        )}
+      </div>
+    </article>
+  );
+}
+
 export function PackageForm({
   initialValues,
   onSubmit,
   submitLabel,
   isSaving = false,
+  submitNotice = "",
   submitError = "",
   externalFieldErrors = {},
+  packageImages = [],
+  removedImages = [],
+  queuedImages = [],
+  onSelectImages,
+  onRemoveQueuedImage,
+  onRemovePersistedImage,
+  onRestorePersistedImage,
+  imageUploadHelpText = "",
 }) {
   const [values, setValues] = useState(() => normalizePackageFormValues(initialValues));
   const [fieldErrors, setFieldErrors] = useState({});
@@ -189,6 +244,15 @@ export function PackageForm({
   useEffect(() => {
     setFieldErrors(externalFieldErrors || {});
   }, [externalFieldErrors]);
+
+  function handleImageSelection(event) {
+    const files = event.target.files;
+    if (files?.length && onSelectImages) {
+      onSelectImages(files);
+    }
+
+    event.target.value = "";
+  }
 
   function handleChange(event) {
     const { name, type, checked, value } = event.target;
@@ -236,9 +300,9 @@ export function PackageForm({
         />
       ) : null}
 
-      {isSaving ? (
+      {submitNotice ? (
         <div className="package-form__notice" role="status">
-          Saving package...
+          {submitNotice}
         </div>
       ) : null}
 
@@ -402,6 +466,91 @@ export function PackageForm({
           <FieldError message={fieldErrors.status} />
         </label>
       </div>
+
+      <section className="package-form__images" aria-labelledby="package-images-heading">
+        <div className="package-form__images-header">
+          <div>
+            <h2 id="package-images-heading">Package images</h2>
+            <p>
+              Upload one or more package images through the protected backend endpoint.
+            </p>
+          </div>
+        </div>
+
+        <label className="package-form__upload" htmlFor="package-images-upload">
+          <span>Add images</span>
+          <input
+            id="package-images-upload"
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            multiple
+            onChange={handleImageSelection}
+            disabled={isSaving}
+          />
+        </label>
+
+        {imageUploadHelpText ? (
+          <p className="package-form__images-help">{imageUploadHelpText}</p>
+        ) : null}
+
+        {packageImages.length > 0 ? (
+          <div className="package-image-grid">
+            {packageImages.map((image) => (
+              <ImagePreviewTile
+                key={image.id}
+                image={image}
+                label={image.is_cover ? "Cover image" : `Uploaded image #${image.display_order + 1}`}
+                removeLabel="Remove"
+                onRemove={() => onRemovePersistedImage?.(image.id)}
+              />
+            ))}
+          </div>
+        ) : (
+          <p className="package-form__images-empty">
+            No uploaded images are attached to this package yet.
+          </p>
+        )}
+
+        {queuedImages.length > 0 ? (
+          <>
+            <div className="package-form__images-subheading">Queued for upload</div>
+            <div className="package-image-grid">
+              {queuedImages.map((image) => (
+                <ImagePreviewTile
+                  key={image.id}
+                  image={image}
+                  label={image.name}
+                  removeLabel="Remove"
+                  onRemove={() => onRemoveQueuedImage?.(image.id)}
+                  isQueued
+                />
+              ))}
+            </div>
+          </>
+        ) : null}
+
+        {removedImages.length > 0 ? (
+          <>
+            <div className="package-form__images-subheading">Pending removal</div>
+            <p className="package-form__images-help">
+              These images will be removed from the package when you save.
+            </p>
+            <div className="package-image-grid">
+              {removedImages.map((image) => (
+                <ImagePreviewTile
+                  key={image.id}
+                  image={image}
+                  label={image.is_cover ? "Cover image" : `Uploaded image #${image.display_order + 1}`}
+                  removeLabel="Remove"
+                  onRemove={() => onRemovePersistedImage?.(image.id)}
+                  isPendingRemoval
+                  onRestore={() => onRestorePersistedImage?.(image.id)}
+                />
+              ))}
+            </div>
+          </>
+        ) : null}
+      </section>
 
       <div className="package-form__toggles">
         <label className="package-form__toggle" htmlFor="is_active">
