@@ -39,7 +39,7 @@ function formatFlagLabel(value) {
 }
 
 export function AdminPackagesPage() {
-  const { getAccessToken } = useAuth();
+  const { logout } = useAuth();
   const [packages, setPackages] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -51,7 +51,7 @@ export function AdminPackagesPage() {
 
     async function loadPackages() {
       try {
-        const packagesPayload = await getAdminPackages(getAccessToken);
+        const packagesPayload = await getAdminPackages();
 
         if (!isMounted) {
           return;
@@ -77,7 +77,7 @@ export function AdminPackagesPage() {
     return () => {
       isMounted = false;
     };
-  }, [getAccessToken]);
+  }, []);
 
   async function handlePublishToggle(packageItem) {
     setActionError("");
@@ -85,8 +85,8 @@ export function AdminPackagesPage() {
 
     try {
       const updatedPackage = packageItem.is_published
-        ? await unpublishPackage(packageItem.id, getAccessToken)
-        : await publishPackage(packageItem.id, getAccessToken);
+        ? await unpublishPackage(packageItem.id)
+        : await publishPackage(packageItem.id);
 
       setPackages((currentPackages) =>
         currentPackages.map((currentPackage) =>
@@ -113,7 +113,7 @@ export function AdminPackagesPage() {
     setActivePackageId(packageItem.id);
 
     try {
-      await deletePackage(packageItem.id, getAccessToken);
+      await deletePackage(packageItem.id);
       setPackages((currentPackages) =>
         currentPackages.filter((currentPackage) => currentPackage.id !== packageItem.id)
       );
@@ -149,6 +149,9 @@ export function AdminPackagesPage() {
                 <Link className="button-secondary" to="/admin/dashboard">
                   Back to dashboard
                 </Link>
+                <button className="button-secondary" type="button" onClick={() => logout("/")}>
+                  Log out
+                </button>
               </div>
             </div>
 

@@ -22,7 +22,7 @@ function ScrollManager() {
 }
 
 export function Layout() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, logout } = useAuth();
 
   return (
     <div className="site-shell">
@@ -49,6 +49,15 @@ export function Layout() {
             <NavLink className="site-nav__link" to={isAuthenticated ? "/admin/dashboard" : "/admin/login"}>
               Admin
             </NavLink>
+            {isAuthenticated ? (
+              <button
+                className="button-secondary site-nav__button"
+                type="button"
+                onClick={() => logout("/")}
+              >
+                Log out
+              </button>
+            ) : null}
             <a className="site-nav__link" href="/#contact">
               Contact
             </a>

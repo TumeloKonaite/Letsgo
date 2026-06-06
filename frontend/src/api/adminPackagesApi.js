@@ -1,144 +1,62 @@
-import { apiBaseUrl } from "../lib/api";
+import { authenticatedRequest } from "./client";
 
-function normalizeValidationErrors(detail) {
-  if (!Array.isArray(detail)) {
-    return {};
-  }
-
-  return detail.reduce((fieldErrors, item) => {
-    const location = Array.isArray(item?.loc) ? item.loc : [];
-    const fieldName = location[0] === "body" ? location.at(-1) : null;
-    const message = typeof item?.msg === "string" ? item.msg.trim() : "";
-
-    if (!fieldName || !message || fieldName in fieldErrors) {
-      return fieldErrors;
-    }
-
-    fieldErrors[fieldName] = message;
-    return fieldErrors;
-  }, {});
+function adminPackagesRequest(path, options = {}) {
+  return authenticatedRequest(path, options, "Admin package request failed.");
 }
 
-function buildErrorMessage(payload, fallbackMessage) {
-  if (typeof payload?.detail === "string" && payload.detail.trim()) {
-    return payload.detail;
-  }
-
-  if (Array.isArray(payload?.detail)) {
-    const messages = payload.detail
-      .map((item) => (typeof item?.msg === "string" ? item.msg.trim() : ""))
-      .filter(Boolean);
-
-    if (messages.length > 0) {
-      return messages.join(" ");
-    }
-  }
-
-  return fallbackMessage;
+export function getAdminPackages() {
+  return adminPackagesRequest("/api/admin/packages");
 }
 
-async function adminPackagesRequest(path, getAccessToken, options = {}) {
-  const accessToken = await getAccessToken();
-  const isMultipartBody =
-    typeof FormData !== "undefined" && options.body instanceof FormData;
-  const response = await fetch(`${apiBaseUrl}${path}`, {
-    ...options,
-    headers: {
-      Accept: "application/json",
-      Authorization: `Bearer ${accessToken}`,
-      ...(options.body && !isMultipartBody ? { "Content-Type": "application/json" } : {}),
-      ...options.headers,
-    },
-  });
-
-  if (!response.ok) {
-    let payload = null;
-    let message = "Admin package request failed.";
-    let fieldErrors = {};
-
-    try {
-      payload = await response.json();
-      message = buildErrorMessage(payload, message);
-      fieldErrors = normalizeValidationErrors(payload?.detail);
-    } catch {
-      message = response.statusText || message;
-    }
-
-    if (response.status === 401) {
-      message = "Your admin session is no longer valid. Please sign in again.";
-    }
-
-    const error = new Error(message);
-    error.status = response.status;
-    error.fieldErrors = fieldErrors;
-    error.payload = payload;
-    throw error;
-  }
-
-  if (response.status === 204) {
-    return null;
-  }
-
-  return response.json();
+export function getAdminPackage(id) {
+  return adminPackagesRequest(`/api/admin/packages/${id}`);
 }
 
-export function getAdminPackages(getAccessToken) {
-  return adminPackagesRequest("/api/admin/packages", getAccessToken);
-}
-
-export function getAdminPackage(id, getAccessToken) {
-  return adminPackagesRequest(`/api/admin/packages/${id}`, getAccessToken);
-}
-
-export function createPackage(payload, getAccessToken) {
-  return adminPackagesRequest("/api/admin/packages", getAccessToken, {
+export function createPackage(payload) {
+  return adminPackagesRequest("/api/admin/packages", {
     method: "POST",
     body: JSON.stringify(payload),
   });
 }
 
-export function updatePackage(id, payload, getAccessToken) {
-  return adminPackagesRequest(`/api/admin/packages/${id}`, getAccessToken, {
+export function updatePackage(id, payload) {
+  return adminPackagesRequest(`/api/admin/packages/${id}`, {
     method: "PATCH",
     body: JSON.stringify(payload),
   });
 }
 
-export function getAdminPackageImages(packageId, getAccessToken) {
-  return adminPackagesRequest(`/api/admin/packages/${packageId}/images`, getAccessToken);
+export function getAdminPackageImages(packageId) {
+  return adminPackagesRequest(`/api/admin/packages/${packageId}/images`);
 }
 
-export function uploadAdminPackageImage(packageId, formData, getAccessToken) {
-  return adminPackagesRequest(`/api/admin/packages/${packageId}/images`, getAccessToken, {
+export function uploadAdminPackageImage(packageId, formData) {
+  return adminPackagesRequest(`/api/admin/packages/${packageId}/images`, {
     method: "POST",
     body: formData,
   });
 }
 
-export function deleteAdminPackageImage(packageId, imageId, getAccessToken) {
-  return adminPackagesRequest(
-    `/api/admin/packages/${packageId}/images/${imageId}`,
-    getAccessToken,
-    {
-      method: "DELETE",
-    }
-  );
-}
-
-export function deletePackage(id, getAccessToken) {
-  return adminPackagesRequest(`/api/admin/packages/${id}`, getAccessToken, {
+export function deleteAdminPackageImage(packageId, imageId) {
+  return adminPackagesRequest(`/api/admin/packages/${packageId}/images/${imageId}`, {
     method: "DELETE",
   });
 }
 
-export function publishPackage(id, getAccessToken) {
-  return adminPackagesRequest(`/api/admin/packages/${id}/publish`, getAccessToken, {
+export function deletePackage(id) {
+  return adminPackagesRequest(`/api/admin/packages/${id}`, {
+    method: "DELETE",
+  });
+}
+
+export function publishPackage(id) {
+  return adminPackagesRequest(`/api/admin/packages/${id}/publish`, {
     method: "PATCH",
   });
 }
 
-export function unpublishPackage(id, getAccessToken) {
-  return adminPackagesRequest(`/api/admin/packages/${id}/unpublish`, getAccessToken, {
+export function unpublishPackage(id) {
+  return adminPackagesRequest(`/api/admin/packages/${id}/unpublish`, {
     method: "PATCH",
   });
 }

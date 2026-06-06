@@ -1,8 +1,8 @@
 import { Navigate, Route, Routes } from "react-router-dom";
 
+import { ProtectedRoute } from "./auth/ProtectedRoute";
 import { Layout } from "./components/Layout";
 import { ProtectedAdminRoute } from "./components/ProtectedAdminRoute";
-import { ProtectedRoute } from "./components/ProtectedRoute";
 import { AdminPackageEditorPage } from "./pages/admin/AdminPackageEditorPage";
 import { AdminPackagesPage } from "./pages/admin/AdminPackagesPage";
 import { Dashboard } from "./pages/admin/Dashboard";

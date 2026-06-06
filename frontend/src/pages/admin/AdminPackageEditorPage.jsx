@@ -56,7 +56,7 @@ function buildImageActionErrorMessage(actionLabel, failedItems) {
 }
 
 export function AdminPackageEditorPage() {
-  const { getAccessToken } = useAuth();
+  const { logout } = useAuth();
   const navigate = useNavigate();
   const { packageId } = useParams();
   const routePackageId = packageId ? Number.parseInt(packageId, 10) : null;
@@ -131,8 +131,8 @@ export function AdminPackageEditorPage() {
 
       try {
         const [packagePayload, packageImagesPayload] = await Promise.all([
-          getAdminPackage(routePackageId, getAccessToken),
-          getAdminPackageImages(routePackageId, getAccessToken),
+          getAdminPackage(routePackageId),
+          getAdminPackageImages(routePackageId),
         ]);
 
         if (!isMounted) {
@@ -162,7 +162,7 @@ export function AdminPackageEditorPage() {
     return () => {
       isMounted = false;
     };
-  }, [getAccessToken, isCreateMode, routePackageId]);
+  }, [isCreateMode, routePackageId]);
 
   function handleQueueImages(files) {
     const nextQueuedImages = Array.from(files || []).map((file) => {
@@ -226,11 +226,7 @@ export function AdminPackageEditorPage() {
       formData.append("file", queuedImage.file);
 
       try {
-        const uploadedImage = await uploadAdminPackageImage(
-          packageRecordId,
-          formData,
-          getAccessToken
-        );
+        const uploadedImage = await uploadAdminPackageImage(packageRecordId, formData);
         uploadedImages.push(uploadedImage);
       } catch (requestError) {
         failedUploads.push({
@@ -267,7 +263,7 @@ export function AdminPackageEditorPage() {
 
     for (const image of removedImages) {
       try {
-        await deleteAdminPackageImage(packageRecordId, image.id, getAccessToken);
+        await deleteAdminPackageImage(packageRecordId, image.id);
       } catch (requestError) {
         failedDeletions.push({
           id: image.id,
@@ -310,12 +306,12 @@ export function AdminPackageEditorPage() {
       let packageRecordId = activePackageId;
 
       if (isCreateMode) {
-        const createdPackage = await createPackage(payload, getAccessToken);
+        const createdPackage = await createPackage(payload);
         packageRecordId = createdPackage.id;
         setCreatedPackageId(createdPackage.id);
         setInitialValues(normalizePackageFormValues(createdPackage));
       } else {
-        const updatedPackage = await updatePackage(packageRecordId, payload, getAccessToken);
+        const updatedPackage = await updatePackage(packageRecordId, payload);
         setInitialValues(normalizePackageFormValues(updatedPackage));
       }
 
@@ -379,6 +375,9 @@ export function AdminPackageEditorPage() {
               <Link className="button-secondary" to="/admin/packages">
                 Back to packages
               </Link>
+              <button className="button-secondary" type="button" onClick={() => logout("/")}>
+                Log out
+              </button>
             </div>
           </div>
         </section>

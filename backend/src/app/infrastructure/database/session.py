@@ -32,6 +32,7 @@ def initialize_database(engine: Engine) -> None:
     if engine.dialect.name == "sqlite":
         Base.metadata.create_all(engine)
         _ensure_package_image_storage_key_column(engine)
+        _migrate_legacy_package_statuses(engine)
         _migrate_legacy_booking_statuses(engine)
         return
 
@@ -81,3 +82,16 @@ def _migrate_legacy_booking_statuses(engine: Engine) -> None:
     with engine.begin() as connection:
         connection.execute(text("UPDATE bookings SET status = 'new' WHERE status = 'pending'"))
         connection.execute(text("UPDATE bookings SET status = 'closed' WHERE status = 'rejected'"))
+
+
+def _migrate_legacy_package_statuses(engine: Engine) -> None:
+    inspector = inspect(engine)
+    if "packages" not in inspector.get_table_names():
+        return
+
+    with engine.begin() as connection:
+        connection.execute(text("UPDATE packages SET status = 'draft' WHERE status = 'DRAFT'"))
+        connection.execute(
+            text("UPDATE packages SET status = 'published' WHERE status = 'PUBLISHED'")
+        )
+        connection.execute(text("UPDATE packages SET status = 'archived' WHERE status = 'ARCHIVED'"))

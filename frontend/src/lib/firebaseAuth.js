@@ -1,40 +1,16 @@
-import { initializeApp } from "firebase/app";
 import {
-  GoogleAuthProvider,
-  getAuth,
   onIdTokenChanged,
   signInWithPopup,
   signOut,
 } from "firebase/auth";
 
-const FIREBASE_ADMIN_CLAIM = import.meta.env.VITE_FIREBASE_ADMIN_CLAIM?.trim() || "admin";
-
-const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY?.trim() || "",
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN?.trim() || "",
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID?.trim() || "",
-  appId: import.meta.env.VITE_FIREBASE_APP_ID?.trim() || "",
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET?.trim() || undefined,
-  messagingSenderId:
-    import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID?.trim() || undefined,
-};
-
-const hasCompleteConfig = [
-  firebaseConfig.apiKey,
-  firebaseConfig.authDomain,
-  firebaseConfig.projectId,
-  firebaseConfig.appId,
-].every(Boolean);
-
-let firebaseApp = null;
-let firebaseAuth = null;
-let googleProvider = null;
-
-function getMissingConfigError() {
-  return new Error(
-    "Firebase Auth is not configured. Set VITE_FIREBASE_API_KEY, VITE_FIREBASE_AUTH_DOMAIN, VITE_FIREBASE_PROJECT_ID, and VITE_FIREBASE_APP_ID."
-  );
-}
+import {
+  getFirebaseAdminClaimName as getConfiguredFirebaseAdminClaimName,
+  getFirebaseAuth as getConfiguredFirebaseAuth,
+  getFirebaseConfigError as getConfiguredFirebaseConfigError,
+  getGoogleProvider,
+  isFirebaseConfigured as isConfiguredFirebase,
+} from "./firebase";
 
 function buildUserFromFirebase(firebaseUser, claims) {
   return {
@@ -46,44 +22,19 @@ function buildUserFromFirebase(firebaseUser, claims) {
 }
 
 export function getFirebaseAdminClaimName() {
-  return FIREBASE_ADMIN_CLAIM;
-}
-
-export function isFirebaseConfigured() {
-  return hasCompleteConfig;
-}
-
-export function getFirebaseConfigError() {
-  return getMissingConfigError();
-}
-
-export function getFirebaseApp() {
-  if (!hasCompleteConfig) {
-    throw getMissingConfigError();
-  }
-
-  if (!firebaseApp) {
-    firebaseApp = initializeApp(firebaseConfig);
-  }
-
-  return firebaseApp;
+  return getConfiguredFirebaseAdminClaimName();
 }
 
 export function getFirebaseAuth() {
-  if (!firebaseAuth) {
-    firebaseAuth = getAuth(getFirebaseApp());
-  }
-
-  return firebaseAuth;
+  return getConfiguredFirebaseAuth();
 }
 
-function getGoogleProvider() {
-  if (!googleProvider) {
-    googleProvider = new GoogleAuthProvider();
-    googleProvider.setCustomParameters({ prompt: "select_account" });
-  }
+export function getFirebaseConfigError() {
+  return getConfiguredFirebaseConfigError();
+}
 
-  return googleProvider;
+export function isFirebaseConfigured() {
+  return isConfiguredFirebase();
 }
 
 async function buildSession(firebaseUser, forceRefresh = false) {
@@ -99,17 +50,18 @@ async function buildSession(firebaseUser, forceRefresh = false) {
   const token = await firebaseUser.getIdToken(forceRefresh);
   const tokenResult = await firebaseUser.getIdTokenResult(forceRefresh);
   const claims = tokenResult.claims ?? {};
+  const adminClaimName = getConfiguredFirebaseAdminClaimName();
   return {
     token,
     user: buildUserFromFirebase(firebaseUser, claims),
     isAuthenticated: true,
-    isAdmin: claims[FIREBASE_ADMIN_CLAIM] === true,
+    isAdmin: claims[adminClaimName] === true,
   };
 }
 
 export function subscribeToAuthChanges(onSessionChange, onError) {
   return onIdTokenChanged(
-    getFirebaseAuth(),
+    getConfiguredFirebaseAuth(),
     async (firebaseUser) => {
       try {
         onSessionChange(await buildSession(firebaseUser, true));
@@ -122,15 +74,15 @@ export function subscribeToAuthChanges(onSessionChange, onError) {
 }
 
 export async function loginWithGoogle() {
-  await signInWithPopup(getFirebaseAuth(), getGoogleProvider());
+  await signInWithPopup(getConfiguredFirebaseAuth(), getGoogleProvider());
 }
 
 export async function logoutFromFirebase() {
-  await signOut(getFirebaseAuth());
+  await signOut(getConfiguredFirebaseAuth());
 }
 
 export async function getFreshIdToken(forceRefresh = false) {
-  const auth = getFirebaseAuth();
+  const auth = getConfiguredFirebaseAuth();
   if (!auth.currentUser) {
     return null;
   }
@@ -139,5 +91,5 @@ export async function getFreshIdToken(forceRefresh = false) {
 }
 
 export async function getCurrentSession(forceRefresh = false) {
-  return buildSession(getFirebaseAuth().currentUser, forceRefresh);
+  return buildSession(getConfiguredFirebaseAuth().currentUser, forceRefresh);
 }

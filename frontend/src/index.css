@@ -111,6 +111,11 @@ img {
   gap: 1.25rem;
 }
 
+.site-nav__button {
+  min-height: 42px;
+  padding: 0.7rem 1.05rem;
+}
+
 .site-nav__link {
   position: relative;
   padding-bottom: 0.2rem;
