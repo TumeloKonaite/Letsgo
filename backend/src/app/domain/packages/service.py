@@ -20,6 +20,7 @@ from app.domain.packages.repository import (
     PackageRecord,
     PackageRepository,
 )
+from app.domain.packages.storage import StorageService
 
 
 class PackageNotFoundError(Exception):
@@ -31,8 +32,22 @@ class DuplicatePackageSlugError(Exception):
 
 
 class PackageService:
-    def __init__(self, repository: PackageRepository) -> None:
+    def __init__(
+        self,
+        repository: PackageRepository,
+        storage_service: StorageService | None = None,
+    ) -> None:
         self._repository = repository
+        self._storage_service = storage_service
+
+    def list_packages(self) -> list[PackageResponse]:
+        return [self._to_package_response(package) for package in self._repository.list_all_packages()]
+
+    def get_package(self, package_id: int) -> PackageResponse:
+        package = self._repository.get_by_id(package_id)
+        if package is None:
+            raise PackageNotFoundError(package_id)
+        return self._to_package_response(package)
 
     def list_published_packages(self) -> list[PackageListItem]:
         return [self._to_list_item(package) for package in self._repository.list_published_packages()]
@@ -165,7 +180,7 @@ class PackageService:
     def _to_image(self, image: PackageImageRecord) -> PackageImage:
         return PackageImage(
             id=image.id,
-            image_url=image.image_url,
+            image_url=self._resolve_image_url(image.image_url),
             alt_text=image.alt_text,
             sort_order=image.sort_order,
             is_cover=image.is_cover,
@@ -193,10 +208,20 @@ class PackageService:
     def _hero_image_url(self, images: tuple[PackageImageRecord, ...]) -> str | None:
         cover_image = next((image for image in images if image.is_cover), None)
         if cover_image is not None:
-            return cover_image.image_url
+            return self._resolve_image_url(cover_image.image_url)
         if images:
-            return images[0].image_url
+            return self._resolve_image_url(images[0].image_url)
         return None
+
+    def _resolve_image_url(self, image_url: str) -> str:
+        if self._storage_service is None:
+            return image_url
+
+        object_name = self._storage_service.extract_object_name(image_url)
+        if object_name is None:
+            return image_url
+
+        return self._storage_service.get_presigned_url(object_name)
 
     def _validate_package(self, price_from, duration_days: int) -> None:
         if price_from < 0:

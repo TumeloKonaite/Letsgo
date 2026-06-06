@@ -16,6 +16,12 @@ class InMemoryPackageRepository:
         self._packages = {package.id: package for package in packages or []}
         self._next_id = max(self._packages, default=0) + 1
 
+    def list_all_packages(self) -> list[PackageRecord]:
+        return sorted(
+            self._packages.values(),
+            key=lambda package: (package.display_order, -package.id),
+        )
+
     def create(self, package_data: PackageCreateData) -> PackageRecord:
         package = PackageRecord(
             id=self._next_id,

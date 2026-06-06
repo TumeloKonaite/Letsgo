@@ -105,6 +105,9 @@ class PackageCreateData:
 
 
 class PackageRepository(Protocol):
+    def list_all_packages(self) -> list[PackageRecord]:
+        """Return all packages for admin surfaces."""
+
     def list_published_packages(self) -> list[PackageListItemRecord]:
         """Return all publicly visible packages."""
 

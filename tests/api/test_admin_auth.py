@@ -178,6 +178,7 @@ def test_valid_keycloak_token_is_accepted(admin_client: SeededAdminClient) -> No
 @pytest.mark.parametrize(
     ("method", "path", "payload", "files", "form_data"),
     [
+        ("GET", "/api/admin/packages/{package_id}", None, None, None),
         (
             "POST",
             "/api/admin/packages",

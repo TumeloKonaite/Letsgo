@@ -23,6 +23,7 @@ from app.infrastructure.storage import create_storage_service
 
 def create_application(settings: Settings | None = None) -> FastAPI:
     resolved_settings = settings or get_settings()
+    resolved_settings.validate_database_configuration()
     resolved_settings.validate_keycloak_configuration()
     resolved_settings.validate_storage_configuration()
 
@@ -38,7 +39,10 @@ def create_application(settings: Settings | None = None) -> FastAPI:
         app.state.settings = resolved_settings
         app.state.db_session_factory = session_factory
         app.state.package_repository = package_repository
-        app.state.package_service = PackageService(repository=package_repository)
+        app.state.package_service = PackageService(
+            repository=package_repository,
+            storage_service=storage_service,
+        )
         app.state.booking_repository = booking_repository
         app.state.booking_service = BookingService(repository=booking_repository)
         app.state.storage_service = storage_service

@@ -14,3 +14,4 @@ frontend/.npm-cache/
 # Virtual environments
 .venv
 .env
+letsgosa.db

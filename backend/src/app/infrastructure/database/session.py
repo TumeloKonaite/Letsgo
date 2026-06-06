@@ -5,6 +5,16 @@ from sqlalchemy.orm import Session, sessionmaker
 
 from app.infrastructure.database.models import Base
 
+REQUIRED_TABLES = frozenset(
+    {
+        "packages",
+        "package_images",
+        "package_itinerary_items",
+        "package_availability",
+        "bookings",
+    }
+)
+
 
 def create_database_engine(database_url: str) -> Engine:
     connect_args: dict[str, bool] = {}
@@ -19,9 +29,33 @@ def create_session_factory(engine: Engine) -> sessionmaker[Session]:
 
 
 def initialize_database(engine: Engine) -> None:
-    Base.metadata.create_all(engine)
-    _ensure_package_image_storage_key_column(engine)
-    _migrate_legacy_booking_statuses(engine)
+    if engine.dialect.name == "sqlite":
+        Base.metadata.create_all(engine)
+        _ensure_package_image_storage_key_column(engine)
+        _migrate_legacy_booking_statuses(engine)
+        return
+
+    _verify_database_connection(engine)
+    _verify_required_tables(engine)
+
+
+def _verify_database_connection(engine: Engine) -> None:
+    with engine.connect() as connection:
+        connection.execute(text("SELECT 1"))
+
+
+def _verify_required_tables(engine: Engine) -> None:
+    existing_tables = set(inspect(engine).get_table_names())
+    missing_tables = sorted(REQUIRED_TABLES - existing_tables)
+    if not missing_tables:
+        return
+
+    missing = ", ".join(missing_tables)
+    raise RuntimeError(
+        "Database schema is missing required tables. "
+        "Run `alembic upgrade head` before starting the application. "
+        f"Missing tables: {missing}"
+    )
 
 
 def _ensure_package_image_storage_key_column(engine: Engine) -> None:

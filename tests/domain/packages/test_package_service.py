@@ -1,11 +1,17 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
 from decimal import Decimal
 
 import pytest
 
 from app.api.schemas.packages import PackageCreate, PackageUpdate
-from app.domain.packages.repository import PackageRecord
+from app.domain.packages.repository import (
+    PackageDetailRecord,
+    PackageImageRecord,
+    PackageListItemRecord,
+    PackageRecord,
+)
 from app.domain.packages.service import (
     DuplicatePackageSlugError,
     PackageNotFoundError,
@@ -38,6 +44,54 @@ def _build_service() -> PackageService:
         ]
     )
     return PackageService(repository=repository)
+
+
+@dataclass
+class FakeStorageService:
+    def extract_object_name(self, url: str) -> str | None:
+        prefix = "http://localhost:9000/package-images/"
+        if not url.startswith(prefix):
+            return None
+        return url[len(prefix) :]
+
+    def get_presigned_url(self, object_name: str, hours: int = 1) -> str:
+        return f"http://localhost:9000/package-images/{object_name}?signature=test"
+
+
+@dataclass
+class PublishedPackageRepository:
+    list_item: PackageListItemRecord
+    detail_item: PackageDetailRecord
+
+    def list_all_packages(self) -> list[PackageRecord]:
+        return []
+
+    def create(self, package_data):
+        raise NotImplementedError
+
+    def get_by_id(self, package_id: int) -> PackageRecord | None:
+        return None
+
+    def get_by_slug(self, slug: str) -> PackageRecord | None:
+        return None
+
+    def update(self, package_id: int, package_data):
+        return None
+
+    def publish(self, package_id: int) -> PackageRecord | None:
+        return None
+
+    def unpublish(self, package_id: int) -> PackageRecord | None:
+        return None
+
+    def delete(self, package_id: int) -> bool:
+        return False
+
+    def list_published_packages(self) -> list[PackageListItemRecord]:
+        return [self.list_item]
+
+    def get_published_package_by_slug(self, slug: str) -> PackageDetailRecord | None:
+        return self.detail_item if slug == self.detail_item.slug else None
 
 
 def test_create_package_success() -> None:
@@ -145,3 +199,56 @@ def test_delete_missing_package_fails() -> None:
 
     with pytest.raises(PackageNotFoundError):
         service.delete_package(999)
+
+
+def test_public_package_urls_are_presigned_for_storage_images() -> None:
+    storage_image = PackageImageRecord(
+        id=10,
+        image_url="http://localhost:9000/package-images/packages/cape-town/hero.jpg",
+        alt_text="Hero",
+        sort_order=0,
+        is_cover=True,
+    )
+    repository = PublishedPackageRepository(
+        list_item=PackageListItemRecord(
+            id=1,
+            slug="existing-package",
+            title="Existing Package",
+            short_description="Existing package.",
+            location="Cape Town",
+            duration_days=4,
+            price_from=Decimal("4500.00"),
+            currency="ZAR",
+            is_featured=False,
+            images=(storage_image,),
+        ),
+        detail_item=PackageDetailRecord(
+            id=1,
+            slug="existing-package",
+            title="Existing Package",
+            short_description="Existing package.",
+            full_description="Existing package description.",
+            location="Cape Town",
+            duration_days=4,
+            price_from=Decimal("4500.00"),
+            currency="ZAR",
+            is_featured=False,
+            images=(storage_image,),
+            itinerary=(),
+            availability=(),
+        ),
+    )
+    service = PackageService(repository=repository, storage_service=FakeStorageService())
+
+    list_payload = service.list_published_packages()
+    detail_payload = service.get_published_package_by_slug("existing-package")
+
+    assert list_payload[0].hero_image_url == (
+        "http://localhost:9000/package-images/packages/cape-town/hero.jpg?signature=test"
+    )
+    assert detail_payload.hero_image_url == (
+        "http://localhost:9000/package-images/packages/cape-town/hero.jpg?signature=test"
+    )
+    assert detail_payload.images[0].image_url == (
+        "http://localhost:9000/package-images/packages/cape-town/hero.jpg?signature=test"
+    )

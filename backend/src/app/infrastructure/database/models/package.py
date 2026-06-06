@@ -22,6 +22,10 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.infrastructure.database.models.base import Base, CreatedAtMixin, TimestampMixin
 
 
+def _enum_values(enum_cls: type[Enum]) -> list[str]:
+    return [member.value for member in enum_cls]
+
+
 class PackageAvailabilityStatus(str, Enum):
     AVAILABLE = "available"
     SOLD_OUT = "sold_out"
@@ -55,6 +59,7 @@ class Package(TimestampMixin, Base):
             name="package_publication_status",
             native_enum=False,
             validate_strings=True,
+            values_callable=_enum_values,
         ),
         nullable=False,
         default=PackagePublicationStatus.DRAFT,
@@ -173,6 +178,7 @@ class PackageAvailability(TimestampMixin, Base):
             name="package_availability_status",
             native_enum=False,
             validate_strings=True,
+            values_callable=_enum_values,
         ),
         nullable=False,
         default=PackageAvailabilityStatus.AVAILABLE,
