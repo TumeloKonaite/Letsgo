@@ -12,7 +12,7 @@ DEFAULT_HOST = "0.0.0.0"
 DEFAULT_PORT = 8000
 DEFAULT_DATABASE_URL = "sqlite:///./letsgosa.db"
 PRODUCTION_ENVIRONMENTS = frozenset({"prod", "production"})
-DEFAULT_KEYCLOAK_TIMEOUT_SECONDS = 5.0
+DEFAULT_FIREBASE_ADMIN_ROLE = "admin"
 DEFAULT_STORAGE_PROVIDER = "minio"
 DEFAULT_MINIO_ENDPOINT = "localhost:9000"
 DEFAULT_MINIO_ACCESS_KEY = "minioadmin"
@@ -83,11 +83,9 @@ class Settings:
     host: str = DEFAULT_HOST
     port: int = DEFAULT_PORT
     database_url: str = DEFAULT_DATABASE_URL
-    keycloak_issuer: str | None = None
-    keycloak_audience: str | None = None
-    keycloak_jwks_url: str | None = None
-    keycloak_admin_role: str | None = None
-    keycloak_timeout_seconds: float = DEFAULT_KEYCLOAK_TIMEOUT_SECONDS
+    google_cloud_project: str | None = None
+    firebase_project_id: str | None = None
+    firebase_admin_role: str = DEFAULT_FIREBASE_ADMIN_ROLE
     storage_provider: str = DEFAULT_STORAGE_PROVIDER
     minio_endpoint: str = DEFAULT_MINIO_ENDPOINT
     minio_access_key: str = DEFAULT_MINIO_ACCESS_KEY
@@ -118,16 +116,9 @@ class Settings:
             host=os.getenv("LETSGOSA_HOST", DEFAULT_HOST),
             port=int(os.getenv("LETSGOSA_PORT", str(DEFAULT_PORT))),
             database_url=os.getenv("LETSGOSA_DATABASE_URL", DEFAULT_DATABASE_URL),
-            keycloak_issuer=os.getenv("KEYCLOAK_ISSUER"),
-            keycloak_audience=os.getenv("KEYCLOAK_AUDIENCE"),
-            keycloak_jwks_url=os.getenv("KEYCLOAK_JWKS_URL"),
-            keycloak_admin_role=os.getenv("KEYCLOAK_ADMIN_ROLE"),
-            keycloak_timeout_seconds=float(
-                os.getenv(
-                    "KEYCLOAK_TIMEOUT_SECONDS",
-                    str(DEFAULT_KEYCLOAK_TIMEOUT_SECONDS),
-                )
-            ),
+            google_cloud_project=os.getenv("GOOGLE_CLOUD_PROJECT") or os.getenv("FIREBASE_PROJECT_ID"),
+            firebase_project_id=os.getenv("FIREBASE_PROJECT_ID") or os.getenv("GOOGLE_CLOUD_PROJECT"),
+            firebase_admin_role=os.getenv("FIREBASE_ADMIN_ROLE", DEFAULT_FIREBASE_ADMIN_ROLE),
             storage_provider=os.getenv("STORAGE_PROVIDER", DEFAULT_STORAGE_PROVIDER),
             minio_endpoint=os.getenv("MINIO_ENDPOINT", DEFAULT_MINIO_ENDPOINT),
             minio_access_key=os.getenv("MINIO_ACCESS_KEY", DEFAULT_MINIO_ACCESS_KEY),
@@ -147,20 +138,18 @@ class Settings:
             ),
         )
 
-    def validate_keycloak_configuration(self) -> None:
+    def validate_firebase_configuration(self) -> None:
         missing = [
             name
             for name, value in (
-                ("KEYCLOAK_ISSUER", self.keycloak_issuer),
-                ("KEYCLOAK_AUDIENCE", self.keycloak_audience),
-                ("KEYCLOAK_JWKS_URL", self.keycloak_jwks_url),
-                ("KEYCLOAK_ADMIN_ROLE", self.keycloak_admin_role),
+                ("FIREBASE_PROJECT_ID", self.firebase_project_id),
+                ("FIREBASE_ADMIN_ROLE", self.firebase_admin_role),
             )
             if value is None or not value.strip()
         ]
         if missing:
             names = ", ".join(missing)
-            raise ValueError(f"Missing required Keycloak configuration: {names}")
+            raise ValueError(f"Missing required Firebase configuration: {names}")
 
     def validate_storage_configuration(self) -> None:
         provider = self.storage_provider.strip().lower()

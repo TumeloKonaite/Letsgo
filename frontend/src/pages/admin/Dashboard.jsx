@@ -17,7 +17,7 @@ function formatStatusLabel(status) {
 }
 
 export function Dashboard() {
-  const { user, getAccessToken, logout } = useAuth();
+  const { user, isAdmin, adminClaimName, getAccessToken, logout } = useAuth();
   const [packages, setPackages] = useState([]);
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -82,22 +82,25 @@ export function Dashboard() {
             </div>
 
             <p>
-              This page validates the Keycloak session, refreshes the access token
+              This page validates the Firebase session, refreshes the ID token
               when needed, and calls protected admin endpoints with
-              <code> Authorization: Bearer &lt;access_token&gt;</code>.
+              <code> Authorization: Bearer &lt;Firebase ID token&gt;</code>.
             </p>
 
             <div className="admin-summary-grid">
               <article className="detail-panel">
                 <span className="eyebrow-dark">Signed in as</span>
                 <h3>{profile?.username || user?.username || "Admin"}</h3>
-                <p>{profile?.email || user?.email || "No email returned from Keycloak."}</p>
+                <p>{profile?.email || user?.email || "No email returned from Firebase."}</p>
               </article>
 
               <article className="detail-panel">
-                <span className="eyebrow-dark">Roles</span>
-                <h3>{(profile?.roles || user?.roles || []).join(", ") || "No roles found"}</h3>
-                <p>The backend still enforces the admin role before serving package data.</p>
+                <span className="eyebrow-dark">Admin claim</span>
+                <h3>{isAdmin ? "Granted" : "Missing"}</h3>
+                <p>
+                  The backend only serves admin data when the Firebase custom claim
+                  <code> {adminClaimName}: true</code> is present.
+                </p>
               </article>
 
               <article className="detail-panel">

@@ -38,6 +38,30 @@ def _raise_for_package_error(exc: Exception) -> None:
     raise exc
 
 
+@router.get(
+    "",
+    response_model=list[PackageResponse],
+)
+def list_packages(
+    service: Annotated[PackageService, Depends(get_package_service)],
+) -> list[PackageResponse]:
+    return service.list_packages()
+
+
+@router.get(
+    "/{package_id}",
+    response_model=PackageResponse,
+)
+def get_package(
+    package_id: int,
+    service: Annotated[PackageService, Depends(get_package_service)],
+) -> PackageResponse:
+    try:
+        return service.get_package(package_id)
+    except PackageNotFoundError as exc:
+        _raise_for_package_error(exc)
+
+
 @router.post(
     "",
     response_model=PackageResponse,

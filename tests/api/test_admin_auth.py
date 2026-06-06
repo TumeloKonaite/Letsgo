@@ -1,35 +1,21 @@
 from __future__ import annotations
 
-from base64 import urlsafe_b64encode
 from dataclasses import dataclass
-from datetime import UTC, datetime, timedelta
 from decimal import Decimal
-from hashlib import sha256
-import json
 
 from fastapi.testclient import TestClient
 import pytest
 
-from app.core.keycloak import KeycloakJWTValidator
-from app.core.config import Settings
 from app.infrastructure.database.models import Package, PackageImage
 from app.main import create_application
-
-RS256_DIGEST_INFO_PREFIX = bytes.fromhex("3031300d060960864801650304020105000420")
-TEST_KID = "test-key"
-TEST_ISSUER = "https://keycloak.example.com/realms/letsgosa"
-TEST_JWKS_URL = "https://keycloak.example.com/realms/letsgosa/protocol/openid-connect/certs"
-TEST_AUDIENCE = "letsgosa-admin"
-TEST_ADMIN_ROLE = "admin"
-TEST_JWK = {
-    "kty": "RSA",
-    "use": "sig",
-    "alg": "RS256",
-    "kid": TEST_KID,
-    "n": "xCjGp4WD3Hpj4czGtOGYQb2qN7g0LrzXha1XMWtUnNpefnkEgIOEBtTNxn9IATDpA65_JK8KqPUm2aO0XfnaCHY4grJbm3TtJijcx_obVd-kUBxhid2oTCw_00nckN7MC1bII_PbB5c5UryPQyTQqOFUVidNZL7Z-FOqKgP9GE4QG645AC1toyRjSQbfyY3FPxPBD1AqcUAgWF25KWMeOaY8p9LZ_TK2yhqYk94Ta5rkkCyDYiJ6DIn1EMIq9hBdLK7GLvuLwwVUyDzn_TnqZYrJC5Bc5owOlo8d5EijPpx7IaZCIOKe8MXWYOhFelciAwkk_gf4BcenvYi2WPuZvQ",
-    "e": "AQAB",
-}
-TEST_PRIVATE_EXPONENT = "qoIjQ-Tb3N-KSPFeXEaouaRq_KoiuemukeU-IJgCYaGzd84r6qXnMqTyBbQH2_ku4uNgY3vAEWOflJknJHUVYDubHYh59qRpq7zjRPUTo86Vnok9A8DoFOZ1yGywzEDOLqENsaq73lpGGrQK97tdoR7U11qsfIElKSVYidMTwnY4SaxP0NAtdLlAKF_4wIIv89MRWCRZmxF9Tklpwqp7R8BTr9ayJ80cT0rrJoKzbgwzLeOzLSBQomdgFtwcP76UAPxrjI1J6qWl_tDVRBJNTCw7NFFg5ItTbKPNQeIA1l-6gl1U1eAf0S7w5bXFdb9l5_Bn_lV8NmfrYdO74MkbhQ"
+from tests.api.firebase_auth_helpers import (
+    TEST_ADMIN_TOKEN,
+    TEST_EDITOR_TOKEN,
+    TEST_EXPIRED_TOKEN,
+    bearer_headers,
+    build_test_settings,
+    install_stub_firebase_auth,
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -37,81 +23,6 @@ class SeededAdminClient:
     client: TestClient
     package_id: int
     image_id: int
-
-
-def _base64url_encode(data: bytes) -> str:
-    return urlsafe_b64encode(data).decode("ascii").rstrip("=")
-
-
-def _base64url_decode_int(value: str) -> int:
-    padding = "=" * ((4 - len(value) % 4) % 4)
-    return int.from_bytes(__import__("base64").urlsafe_b64decode(f"{value}{padding}"), "big")
-
-
-def _base64url_decode_bytes(value: str) -> bytes:
-    padding = "=" * ((4 - len(value) % 4) % 4)
-    return __import__("base64").urlsafe_b64decode(f"{value}{padding}")
-
-
-def _sign_rs256(signing_input: bytes) -> bytes:
-    modulus = _base64url_decode_int(TEST_JWK["n"])
-    private_exponent = _base64url_decode_int(TEST_PRIVATE_EXPONENT)
-    key_length = (modulus.bit_length() + 7) // 8
-
-    digest = sha256(signing_input).digest()
-    digest_info = RS256_DIGEST_INFO_PREFIX + digest
-    padding_length = key_length - len(digest_info) - 3
-    encoded_message = b"\x00\x01" + (b"\xff" * padding_length) + b"\x00" + digest_info
-    signature_int = pow(int.from_bytes(encoded_message, "big"), private_exponent, modulus)
-    return signature_int.to_bytes(key_length, "big")
-
-
-def _build_token(
-    *,
-    roles: list[str],
-    expires_at: datetime | None = None,
-    audience: str = TEST_AUDIENCE,
-) -> str:
-    now = datetime.now(tz=UTC)
-    payload = {
-        "iss": TEST_ISSUER,
-        "sub": "admin-user-1",
-        "aud": audience,
-        "exp": int((expires_at or (now + timedelta(minutes=5))).timestamp()),
-        "iat": int(now.timestamp()),
-        "preferred_username": "admin.user",
-        "email": "admin@example.com",
-        "realm_access": {"roles": roles},
-    }
-    header = {"alg": "RS256", "typ": "JWT", "kid": TEST_KID}
-    header_segment = _base64url_encode(
-        json.dumps(header, separators=(",", ":"), sort_keys=True).encode("utf-8")
-    )
-    payload_segment = _base64url_encode(
-        json.dumps(payload, separators=(",", ":"), sort_keys=True).encode("utf-8")
-    )
-    signing_input = f"{header_segment}.{payload_segment}".encode("ascii")
-    signature_segment = _base64url_encode(_sign_rs256(signing_input))
-    return f"{header_segment}.{payload_segment}.{signature_segment}"
-
-
-def _tamper_token_signature(token: str) -> str:
-    header_segment, payload_segment, signature_segment = token.split(".")
-    tampered_signature = bytearray(_base64url_decode_bytes(signature_segment))
-    tampered_signature[0] ^= 0x01
-    return (
-        f"{header_segment}.{payload_segment}."
-        f"{_base64url_encode(bytes(tampered_signature))}"
-    )
-
-
-def _build_auth_service() -> KeycloakJWTValidator:
-    return KeycloakJWTValidator(
-        issuer=TEST_ISSUER,
-        audience=TEST_AUDIENCE,
-        jwks_url=TEST_JWKS_URL,
-        jwks_fetcher=lambda _: {"keys": [TEST_JWK]},
-    )
 
 
 def _seed_existing_package(session_factory) -> tuple[int, int]:
@@ -144,26 +55,18 @@ def _seed_existing_package(session_factory) -> tuple[int, int]:
 @pytest.fixture
 def admin_client(tmp_path) -> SeededAdminClient:
     database_url = f"sqlite:///{tmp_path / 'admin.db'}"
-    application = create_application(
-        settings=Settings(
-            database_url=database_url,
-            keycloak_issuer=TEST_ISSUER,
-            keycloak_audience=TEST_AUDIENCE,
-            keycloak_jwks_url=TEST_JWKS_URL,
-            keycloak_admin_role=TEST_ADMIN_ROLE,
-        )
-    )
+    application = create_application(settings=build_test_settings(database_url))
 
     with TestClient(application) as client:
-        application.state.keycloak_auth_service = _build_auth_service()
+        install_stub_firebase_auth(application)
         package_id, image_id = _seed_existing_package(application.state.db_session_factory)
         yield SeededAdminClient(client=client, package_id=package_id, image_id=image_id)
 
 
-def test_valid_keycloak_token_is_accepted(admin_client: SeededAdminClient) -> None:
+def test_valid_firebase_token_is_accepted(admin_client: SeededAdminClient) -> None:
     response = admin_client.client.get(
         "/api/admin/auth/me",
-        headers={"Authorization": f"Bearer {_build_token(roles=['admin'])}"},
+        headers=bearer_headers(TEST_ADMIN_TOKEN),
     )
 
     assert response.status_code == 200
@@ -171,7 +74,7 @@ def test_valid_keycloak_token_is_accepted(admin_client: SeededAdminClient) -> No
         "sub": "admin-user-1",
         "username": "admin.user",
         "email": "admin@example.com",
-        "roles": ["admin"],
+        "claims": {"admin": True},
     }
 
 
@@ -256,11 +159,9 @@ def test_missing_token_returns_401_for_all_admin_package_mutations(
 
 
 def test_invalid_token_returns_401(admin_client: SeededAdminClient) -> None:
-    invalid_token = _tamper_token_signature(_build_token(roles=["admin"]))
-
     response = admin_client.client.post(
         "/api/admin/packages",
-        headers={"Authorization": f"Bearer {invalid_token}"},
+        headers=bearer_headers("invalid-token"),
         json={
             "title": "New Package",
             "slug": "new-package",
@@ -284,11 +185,9 @@ def test_invalid_token_returns_401(admin_client: SeededAdminClient) -> None:
 
 
 def test_expired_token_returns_401(admin_client: SeededAdminClient) -> None:
-    expired_token = _build_token(roles=["admin"], expires_at=datetime.now(tz=UTC) - timedelta(minutes=1))
-
     response = admin_client.client.post(
         "/api/admin/packages",
-        headers={"Authorization": f"Bearer {expired_token}"},
+        headers=bearer_headers(TEST_EXPIRED_TOKEN),
         json={
             "title": "New Package",
             "slug": "new-package",
@@ -311,10 +210,12 @@ def test_expired_token_returns_401(admin_client: SeededAdminClient) -> None:
     assert response.json() == {"detail": "Token expired"}
 
 
-def test_user_with_admin_role_can_access_protected_routes(admin_client: SeededAdminClient) -> None:
+def test_user_with_admin_claim_can_access_protected_routes(
+    admin_client: SeededAdminClient,
+) -> None:
     response = admin_client.client.post(
         "/api/admin/packages",
-        headers={"Authorization": f"Bearer {_build_token(roles=['admin'])}"},
+        headers=bearer_headers(TEST_ADMIN_TOKEN),
         json={
             "title": "New Package",
             "slug": "new-package",
@@ -337,22 +238,22 @@ def test_user_with_admin_role_can_access_protected_routes(admin_client: SeededAd
     assert response.json()["slug"] == "new-package"
 
 
-def test_user_without_admin_role_receives_403(admin_client: SeededAdminClient) -> None:
+def test_user_without_admin_claim_receives_403(admin_client: SeededAdminClient) -> None:
     response = admin_client.client.patch(
         f"/api/admin/packages/{admin_client.package_id}",
-        headers={"Authorization": f"Bearer {_build_token(roles=['editor'])}"},
+        headers=bearer_headers(TEST_EDITOR_TOKEN),
         json={"title": "Forbidden Update"},
     )
 
     assert response.status_code == 403
-    assert response.json() == {"detail": "Admin role required"}
+    assert response.json() == {"detail": "Admin claim required"}
 
 
-def test_application_fails_fast_when_keycloak_configuration_is_missing(tmp_path) -> None:
-    database_url = f"sqlite:///{tmp_path / 'missing-keycloak.db'}"
+def test_application_fails_fast_when_firebase_configuration_is_missing(tmp_path) -> None:
+    database_url = f"sqlite:///{tmp_path / 'missing-firebase.db'}"
 
     with pytest.raises(
         ValueError,
-        match="Missing required Keycloak configuration: KEYCLOAK_ISSUER, KEYCLOAK_AUDIENCE, KEYCLOAK_JWKS_URL, KEYCLOAK_ADMIN_ROLE",
+        match="Missing required Firebase configuration: FIREBASE_PROJECT_ID",
     ):
-        create_application(settings=Settings(database_url=database_url))
+        create_application(settings=build_test_settings(database_url, firebase_project_id=None))

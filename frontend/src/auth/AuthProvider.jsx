@@ -1,4 +1,5 @@
 import {
+  useCallback,
   createContext,
   useContext,
   useEffect,
@@ -7,13 +8,16 @@ import {
 } from "react";
 
 import {
-  buildUserFromToken,
-  ensureFreshToken,
-  getKeycloak,
-  getKeycloakConfigError,
-  initializeKeycloak,
-  isKeycloakConfigured,
-} from "../lib/keycloak";
+  getCurrentSession,
+  getFirebaseAdminClaimName,
+  getFirebaseAuth,
+  getFirebaseConfigError,
+  getFreshIdToken,
+  isFirebaseConfigured,
+  loginWithGoogle,
+  logoutFromFirebase,
+  subscribeToAuthChanges,
+} from "../lib/firebaseAuth";
 
 const AuthContext = createContext(null);
 
@@ -28,168 +32,153 @@ function normalizeErrorMessage(error, fallbackMessage) {
 export function AuthProvider({ children }) {
   const [isReady, setIsReady] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [user, setUser] = useState(null);
   const [token, setToken] = useState(null);
   const [error, setError] = useState("");
+  const adminClaimName = getFirebaseAdminClaimName();
 
   useEffect(() => {
     let isMounted = true;
+    let unsubscribe = () => {};
 
-    if (!isKeycloakConfigured()) {
+    if (!isFirebaseConfigured()) {
       setIsReady(true);
       return undefined;
     }
 
-    async function bootstrapAuth() {
-      try {
-        const keycloak = await initializeKeycloak();
-
-        keycloak.onAuthSuccess = async () => {
-          try {
-            const nextToken = await ensureFreshToken();
-            if (!isMounted) {
-              return;
-            }
-            setToken(nextToken);
-            setUser(buildUserFromToken(keycloak));
-            setIsAuthenticated(Boolean(keycloak.authenticated));
-            setError("");
-          } catch (refreshError) {
-            if (!isMounted) {
-              return;
-            }
-            setError(
-              normalizeErrorMessage(
-                refreshError,
-                "Your admin session could not be refreshed."
-              )
-            );
+    try {
+      unsubscribe = subscribeToAuthChanges(
+        (session) => {
+          if (!isMounted) {
+            return;
           }
-        };
-
-        keycloak.onAuthLogout = () => {
+          setToken(session.token);
+          setUser(session.user);
+          setIsAuthenticated(session.isAuthenticated);
+          setIsAdmin(session.isAdmin);
+          setError("");
+          setIsReady(true);
+        },
+        (authError) => {
           if (!isMounted) {
             return;
           }
           setToken(null);
           setUser(null);
           setIsAuthenticated(false);
-        };
-
-        keycloak.onTokenExpired = () => {
-          ensureFreshToken().catch(() => {
-            if (!isMounted) {
-              return;
-            }
-            setError("Your admin session expired. Please sign in again.");
-            setToken(null);
-            setUser(null);
-            setIsAuthenticated(false);
-          });
-        };
-
-        if (!isMounted) {
-          return;
-        }
-
-        setToken(keycloak.token ?? null);
-        setUser(buildUserFromToken(keycloak));
-        setIsAuthenticated(Boolean(keycloak.authenticated));
-        setError("");
-      } catch (authError) {
-        if (!isMounted) {
-          return;
-        }
-        setError(
-          normalizeErrorMessage(
-            authError,
-            "Unable to initialize the admin login flow."
-          )
-        );
-      } finally {
-        if (isMounted) {
+          setIsAdmin(false);
+          setError(
+            normalizeErrorMessage(
+              authError,
+              "Unable to initialize the admin login flow."
+            )
+          );
           setIsReady(true);
         }
-      }
+      );
+    } catch (authError) {
+      setError(
+        normalizeErrorMessage(
+          authError,
+          "Unable to initialize the admin login flow."
+        )
+      );
+      setIsReady(true);
     }
-
-    bootstrapAuth();
 
     return () => {
       isMounted = false;
+      unsubscribe();
     };
+  }, []);
+
+  const login = useCallback(async (redirectPath = "/admin/dashboard") => {
+    if (!isFirebaseConfigured()) {
+      setError(getFirebaseConfigError().message);
+      return;
+    }
+
+    try {
+      setError("");
+      await loginWithGoogle();
+    } catch (loginError) {
+      setError(
+        normalizeErrorMessage(
+          loginError,
+          "Unable to start Google sign-in. Check the Firebase Auth configuration."
+        )
+      );
+    }
+  }, []);
+
+  const logout = useCallback(async (redirectPath = "/admin/login") => {
+    if (!isFirebaseConfigured()) {
+      setToken(null);
+      setUser(null);
+      setIsAuthenticated(false);
+      setIsAdmin(false);
+      return;
+    }
+
+    try {
+      await logoutFromFirebase();
+    } finally {
+      setToken(null);
+      setUser(null);
+      setIsAuthenticated(false);
+      setIsAdmin(false);
+      setError("");
+      if (redirectPath) {
+        window.location.assign(new URL(redirectPath, window.location.origin).toString());
+      }
+    }
+  }, []);
+
+  const getAccessToken = useCallback(async () => {
+    if (!isFirebaseConfigured()) {
+      throw getFirebaseConfigError();
+    }
+
+    const nextToken = await getFreshIdToken();
+    const auth = getFirebaseAuth();
+
+    if (!nextToken || !auth.currentUser) {
+      setToken(null);
+      setUser(null);
+      setIsAuthenticated(false);
+      setIsAdmin(false);
+      throw new Error("Your admin session is no longer valid. Please sign in again.");
+    }
+
+    const session = await getCurrentSession();
+    setToken(session.token);
+    setUser(session.user);
+    setIsAuthenticated(session.isAuthenticated);
+    setIsAdmin(session.isAdmin);
+    return session.token;
+  }, []);
+
+  const clearError = useCallback(() => {
+    setError("");
   }, []);
 
   const value = useMemo(
     () => ({
       isReady,
       isAuthenticated,
+      isAdmin,
       user,
       token,
       error,
-      isConfigured: isKeycloakConfigured(),
-      async login(redirectPath = "/admin/dashboard") {
-        if (!isKeycloakConfigured()) {
-          setError(getKeycloakConfigError().message);
-          return;
-        }
-
-        try {
-          const keycloak = await initializeKeycloak({ checkSso: false });
-          setError("");
-          await keycloak.login({
-            redirectUri: new URL(redirectPath, window.location.origin).toString(),
-            scope: "openid profile email",
-          });
-        } catch (loginError) {
-          setError(
-            normalizeErrorMessage(
-              loginError,
-              "Unable to start Keycloak login. Check the frontend client configuration."
-            )
-          );
-        }
-      },
-      async logout(redirectPath = "/admin/login") {
-        if (!isKeycloakConfigured()) {
-          setToken(null);
-          setUser(null);
-          setIsAuthenticated(false);
-          return;
-        }
-
-        const keycloak = getKeycloak();
-        setToken(null);
-        setUser(null);
-        setIsAuthenticated(false);
-        setError("");
-        await keycloak.logout({
-          redirectUri: new URL(redirectPath, window.location.origin).toString(),
-        });
-      },
-      async getAccessToken() {
-        if (!isKeycloakConfigured()) {
-          throw getKeycloakConfigError();
-        }
-
-        const nextToken = await ensureFreshToken();
-        const keycloak = getKeycloak();
-
-        if (!nextToken || !keycloak.authenticated) {
-          setToken(null);
-          setUser(null);
-          setIsAuthenticated(false);
-          throw new Error("Your admin session is no longer valid. Please sign in again.");
-        }
-
-        setToken(nextToken);
-        return nextToken;
-      },
-      clearError() {
-        setError("");
-      },
+      adminClaimName,
+      isConfigured: isFirebaseConfigured(),
+      login,
+      logout,
+      getAccessToken,
+      clearError,
     }),
-    [error, isAuthenticated, isReady, token, user]
+    [adminClaimName, clearError, error, getAccessToken, isAdmin, isAuthenticated, isReady, login, logout, token, user]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

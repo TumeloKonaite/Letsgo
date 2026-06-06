@@ -5,10 +5,11 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.auth.firebase_auth import FirebaseAuthService
 from app.api.router import api_router
 from app.api.routes.health import router as health_router
-from app.core.keycloak import KeycloakJWTValidator
 from app.core.config import Settings, get_settings
+from app.core.firebase import initialize_firebase_app
 from app.domain.bookings.service import BookingService
 from app.domain.packages.service import PackageService
 from app.infrastructure.bookings import PostgresBookingRepository
@@ -24,7 +25,7 @@ from app.infrastructure.storage import create_storage_service
 def create_application(settings: Settings | None = None) -> FastAPI:
     resolved_settings = settings or get_settings()
     resolved_settings.validate_database_configuration()
-    resolved_settings.validate_keycloak_configuration()
+    resolved_settings.validate_firebase_configuration()
     resolved_settings.validate_storage_configuration()
 
     @asynccontextmanager
@@ -46,11 +47,8 @@ def create_application(settings: Settings | None = None) -> FastAPI:
         app.state.booking_repository = booking_repository
         app.state.booking_service = BookingService(repository=booking_repository)
         app.state.storage_service = storage_service
-        app.state.keycloak_auth_service = KeycloakJWTValidator(
-            issuer=resolved_settings.keycloak_issuer or "",
-            audience=resolved_settings.keycloak_audience or "",
-            jwks_url=resolved_settings.keycloak_jwks_url or "",
-            timeout_seconds=resolved_settings.keycloak_timeout_seconds,
+        app.state.firebase_auth_service = FirebaseAuthService(
+            initialize_firebase_app(resolved_settings)
         )
         app.state.started = True
 

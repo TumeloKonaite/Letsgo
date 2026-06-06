@@ -6,16 +6,14 @@ from decimal import Decimal
 from fastapi.testclient import TestClient
 import pytest
 
-from app.core.config import Settings
 from app.infrastructure.database.models import Booking, BookingStatus, Package
 from app.main import create_application
-from tests.api.test_admin_auth import (
-    TEST_ADMIN_ROLE,
-    TEST_AUDIENCE,
-    TEST_ISSUER,
-    TEST_JWKS_URL,
-    _build_auth_service,
-    _build_token,
+from tests.api.firebase_auth_helpers import (
+    TEST_ADMIN_TOKEN,
+    TEST_EDITOR_TOKEN,
+    bearer_headers,
+    build_test_settings,
+    install_stub_firebase_auth,
 )
 
 
@@ -71,18 +69,10 @@ def _seed_bookings(session_factory) -> tuple[int, int, int]:
 @pytest.fixture
 def admin_bookings_client(tmp_path) -> AdminBookingsClient:
     database_url = f"sqlite:///{tmp_path / 'admin-bookings.db'}"
-    application = create_application(
-        settings=Settings(
-            database_url=database_url,
-            keycloak_issuer=TEST_ISSUER,
-            keycloak_audience=TEST_AUDIENCE,
-            keycloak_jwks_url=TEST_JWKS_URL,
-            keycloak_admin_role=TEST_ADMIN_ROLE,
-        )
-    )
+    application = create_application(settings=build_test_settings(database_url))
 
     with TestClient(application) as client:
-        application.state.keycloak_auth_service = _build_auth_service()
+        install_stub_firebase_auth(application)
         package_id, booking_id, contacted_booking_id = _seed_bookings(
             application.state.db_session_factory
         )
@@ -95,7 +85,7 @@ def admin_bookings_client(tmp_path) -> AdminBookingsClient:
 
 
 def _admin_headers() -> dict[str, str]:
-    return {"Authorization": f"Bearer {_build_token(roles=['admin'])}"}
+    return bearer_headers(TEST_ADMIN_TOKEN)
 
 
 def test_missing_token_returns_401(admin_bookings_client: AdminBookingsClient) -> None:
@@ -108,11 +98,11 @@ def test_missing_token_returns_401(admin_bookings_client: AdminBookingsClient) -
 def test_non_admin_token_returns_403(admin_bookings_client: AdminBookingsClient) -> None:
     response = admin_bookings_client.client.get(
         "/api/admin/bookings",
-        headers={"Authorization": f"Bearer {_build_token(roles=['editor'])}"},
+        headers=bearer_headers(TEST_EDITOR_TOKEN),
     )
 
     assert response.status_code == 403
-    assert response.json() == {"detail": "Admin role required"}
+    assert response.json() == {"detail": "Admin claim required"}
 
 
 def test_admin_can_list_bookings(admin_bookings_client: AdminBookingsClient) -> None:

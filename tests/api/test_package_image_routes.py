@@ -6,17 +6,15 @@ from decimal import Decimal
 from fastapi.testclient import TestClient
 import pytest
 
-from app.core.config import Settings
 from app.domain.packages.storage import StoredObject
 from app.infrastructure.database.models import Package, PackageImage
 from app.main import create_application
-from tests.api.test_admin_auth import (
-    TEST_ADMIN_ROLE,
-    TEST_AUDIENCE,
-    TEST_ISSUER,
-    TEST_JWKS_URL,
-    _build_auth_service,
-    _build_token,
+from tests.api.firebase_auth_helpers import (
+    TEST_ADMIN_TOKEN,
+    TEST_EDITOR_TOKEN,
+    bearer_headers,
+    build_test_settings,
+    install_stub_firebase_auth,
 )
 
 
@@ -85,19 +83,15 @@ def _seed_package(session_factory) -> int:
 def package_images_client(tmp_path) -> PackageImagesClient:
     database_url = f"sqlite:///{tmp_path / 'package-images.db'}"
     application = create_application(
-        settings=Settings(
-            database_url=database_url,
-            keycloak_issuer=TEST_ISSUER,
-            keycloak_audience=TEST_AUDIENCE,
-            keycloak_jwks_url=TEST_JWKS_URL,
-            keycloak_admin_role=TEST_ADMIN_ROLE,
+        settings=build_test_settings(
+            database_url,
             package_image_max_upload_bytes=128,
         )
     )
     storage = FakeStorageService()
 
     with TestClient(application) as client:
-        application.state.keycloak_auth_service = _build_auth_service()
+        install_stub_firebase_auth(application)
         application.state.storage_service = storage
         package_id = _seed_package(application.state.db_session_factory)
         yield PackageImagesClient(
@@ -109,7 +103,7 @@ def package_images_client(tmp_path) -> PackageImagesClient:
 
 
 def _admin_headers() -> dict[str, str]:
-    return {"Authorization": f"Bearer {_build_token(roles=['admin'])}"}
+    return bearer_headers(TEST_ADMIN_TOKEN)
 
 
 def _jpeg_bytes() -> bytes:
@@ -139,12 +133,12 @@ def test_authenticated_admin_can_upload_images(package_images_client: PackageIma
 def test_non_admin_users_receive_403(package_images_client: PackageImagesClient) -> None:
     response = package_images_client.client.post(
         f"/api/admin/packages/{package_images_client.package_id}/images",
-        headers={"Authorization": f"Bearer {_build_token(roles=['editor'])}"},
+        headers=bearer_headers(TEST_EDITOR_TOKEN),
         files={"file": ("cape-town.jpg", _jpeg_bytes(), "image/jpeg")},
     )
 
     assert response.status_code == 403
-    assert response.json() == {"detail": "Admin role required"}
+    assert response.json() == {"detail": "Admin claim required"}
 
 
 def test_unsupported_file_types_receive_400(package_images_client: PackageImagesClient) -> None:

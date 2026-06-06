@@ -13,7 +13,7 @@ export function ProtectedRoute({ children }) {
         <div className="container">
           <StatusPanel
             title="Checking admin session"
-            message="Validating your Keycloak login before opening protected pages."
+            message="Validating your Firebase login before opening protected pages."
           />
         </div>
       </main>
@@ -26,7 +26,7 @@ export function ProtectedRoute({ children }) {
         <div className="container">
           <StatusPanel
             title="Admin login unavailable"
-            message="Set the frontend Keycloak environment variables before opening admin pages."
+            message="Set the frontend Firebase environment variables before opening admin pages."
             tone="error"
           />
         </div>
