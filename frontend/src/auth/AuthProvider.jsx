@@ -7,6 +7,7 @@ import {
   useState,
 } from "react";
 
+import { configureApiClient } from "../api/client";
 import {
   getCurrentSession,
   getFirebaseAdminClaimName,
@@ -38,6 +39,22 @@ export function AuthProvider({ children }) {
   const [error, setError] = useState("");
   const adminClaimName = getFirebaseAdminClaimName();
 
+  const applySession = useCallback((session) => {
+    setToken(session.token);
+    setUser(session.user);
+    setIsAuthenticated(session.isAuthenticated);
+    setIsAdmin(session.isAdmin);
+  }, []);
+
+  const clearSession = useCallback(() => {
+    applySession({
+      token: null,
+      user: null,
+      isAuthenticated: false,
+      isAdmin: false,
+    });
+  }, [applySession]);
+
   useEffect(() => {
     let isMounted = true;
     let unsubscribe = () => {};
@@ -53,10 +70,7 @@ export function AuthProvider({ children }) {
           if (!isMounted) {
             return;
           }
-          setToken(session.token);
-          setUser(session.user);
-          setIsAuthenticated(session.isAuthenticated);
-          setIsAdmin(session.isAdmin);
+          applySession(session);
           setError("");
           setIsReady(true);
         },
@@ -64,10 +78,7 @@ export function AuthProvider({ children }) {
           if (!isMounted) {
             return;
           }
-          setToken(null);
-          setUser(null);
-          setIsAuthenticated(false);
-          setIsAdmin(false);
+          clearSession();
           setError(
             normalizeErrorMessage(
               authError,
@@ -91,9 +102,9 @@ export function AuthProvider({ children }) {
       isMounted = false;
       unsubscribe();
     };
-  }, []);
+  }, [applySession, clearSession]);
 
-  const login = useCallback(async (redirectPath = "/admin/dashboard") => {
+  const login = useCallback(async () => {
     if (!isFirebaseConfigured()) {
       setError(getFirebaseConfigError().message);
       return;
@@ -114,50 +125,50 @@ export function AuthProvider({ children }) {
 
   const logout = useCallback(async (redirectPath = "/admin/login") => {
     if (!isFirebaseConfigured()) {
-      setToken(null);
-      setUser(null);
-      setIsAuthenticated(false);
-      setIsAdmin(false);
+      clearSession();
       return;
     }
 
     try {
       await logoutFromFirebase();
     } finally {
-      setToken(null);
-      setUser(null);
-      setIsAuthenticated(false);
-      setIsAdmin(false);
+      clearSession();
       setError("");
       if (redirectPath) {
         window.location.assign(new URL(redirectPath, window.location.origin).toString());
       }
     }
-  }, []);
+  }, [clearSession]);
 
   const getAccessToken = useCallback(async () => {
     if (!isFirebaseConfigured()) {
       throw getFirebaseConfigError();
     }
 
-    const nextToken = await getFreshIdToken();
     const auth = getFirebaseAuth();
-
-    if (!nextToken || !auth.currentUser) {
-      setToken(null);
-      setUser(null);
-      setIsAuthenticated(false);
-      setIsAdmin(false);
+    if (!auth.currentUser) {
+      clearSession();
       throw new Error("Your admin session is no longer valid. Please sign in again.");
     }
 
-    const session = await getCurrentSession();
-    setToken(session.token);
-    setUser(session.user);
-    setIsAuthenticated(session.isAuthenticated);
-    setIsAdmin(session.isAdmin);
+    await getFreshIdToken(true);
+    const session = await getCurrentSession(true);
+    applySession(session);
     return session.token;
-  }, []);
+  }, [applySession, clearSession]);
+
+  useEffect(() => {
+    configureApiClient({
+      getAccessToken,
+      onUnauthorized: async () => {
+        await logout("/admin/login");
+      },
+    });
+
+    return () => {
+      configureApiClient();
+    };
+  }, [getAccessToken, logout]);
 
   const clearError = useCallback(() => {
     setError("");

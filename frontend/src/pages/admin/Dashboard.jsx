@@ -17,7 +17,7 @@ function formatStatusLabel(status) {
 }
 
 export function Dashboard() {
-  const { user, isAdmin, adminClaimName, getAccessToken, logout } = useAuth();
+  const { user, isAdmin, adminClaimName, logout } = useAuth();
   const [packages, setPackages] = useState([]);
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -29,8 +29,8 @@ export function Dashboard() {
     async function loadAdminData() {
       try {
         const [profilePayload, packagesPayload] = await Promise.all([
-          getCurrentAdmin(getAccessToken),
-          getAdminPackages(getAccessToken),
+          getCurrentAdmin(),
+          getAdminPackages(),
         ]);
 
         if (!isMounted) {
@@ -58,7 +58,7 @@ export function Dashboard() {
     return () => {
       isMounted = false;
     };
-  }, [getAccessToken]);
+  }, []);
 
   return (
     <main className="page">

@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 
 import { useAuth } from "../auth/AuthProvider";
-import { ProtectedRoute } from "./ProtectedRoute";
+import { ProtectedRoute } from "../auth/ProtectedRoute";
 import { StatusPanel } from "./StatusPanel";
 
 export function ProtectedAdminRoute({ children }) {

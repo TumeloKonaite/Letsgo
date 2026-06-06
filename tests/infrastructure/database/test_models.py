@@ -268,3 +268,71 @@ def test_initialize_database_migrates_legacy_booking_status_values(tmp_path) -> 
         assert rows == ["new", "closed"]
     finally:
         engine.dispose()
+
+
+def test_initialize_database_migrates_legacy_package_status_values(tmp_path) -> None:
+    engine = create_engine(f"sqlite:///{tmp_path / 'legacy-packages.db'}")
+
+    with engine.begin() as connection:
+        connection.execute(
+            text(
+                """
+                CREATE TABLE packages (
+                    id INTEGER PRIMARY KEY,
+                    title VARCHAR(200) NOT NULL,
+                    slug VARCHAR(255) NOT NULL,
+                    short_description VARCHAR(500),
+                    description TEXT NOT NULL,
+                    destination VARCHAR(150) NOT NULL,
+                    duration_days INTEGER NOT NULL,
+                    duration_nights INTEGER NOT NULL,
+                    price_from NUMERIC(10, 2) NOT NULL,
+                    currency VARCHAR(3) NOT NULL,
+                    is_active BOOLEAN NOT NULL,
+                    status VARCHAR(50) NOT NULL,
+                    is_published BOOLEAN NOT NULL,
+                    is_featured BOOLEAN NOT NULL,
+                    display_order INTEGER NOT NULL,
+                    created_at DATETIME,
+                    updated_at DATETIME
+                )
+                """
+            )
+        )
+        connection.execute(
+            text(
+                """
+                INSERT INTO packages (
+                    title,
+                    slug,
+                    short_description,
+                    description,
+                    destination,
+                    duration_days,
+                    duration_nights,
+                    price_from,
+                    currency,
+                    is_active,
+                    status,
+                    is_published,
+                    is_featured,
+                    display_order
+                ) VALUES
+                    ('Legacy Draft', 'legacy-draft', NULL, 'Draft package', 'Cape Town', 3, 2, 1000, 'ZAR', 1, 'DRAFT', 0, 0, 0),
+                    ('Legacy Published', 'legacy-published', NULL, 'Published package', 'Johannesburg', 4, 3, 2000, 'ZAR', 1, 'PUBLISHED', 1, 0, 1),
+                    ('Legacy Archived', 'legacy-archived', NULL, 'Archived package', 'Durban', 5, 4, 3000, 'ZAR', 0, 'ARCHIVED', 0, 0, 2)
+                """
+            )
+        )
+
+    try:
+        initialize_database(engine)
+
+        with engine.connect() as connection:
+            rows = connection.execute(
+                text("SELECT status FROM packages ORDER BY id ASC")
+            ).scalars().all()
+
+        assert rows == ["draft", "published", "archived"]
+    finally:
+        engine.dispose()
