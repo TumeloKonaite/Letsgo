@@ -84,6 +84,20 @@ def test_production_settings_accept_postgresql_psycopg_database_urls() -> None:
     settings.validate_database_configuration()
 
 
+def test_production_settings_accept_cloud_sql_unix_socket_urls() -> None:
+    settings = config.Settings(
+        environment="production",
+        database_url=(
+            "postgresql+psycopg://letsgodev:password@/letsgo"
+            "?host=/cloudsql/letsgodb:us-central1:free-trial-first-project"
+        ),
+        cloud_sql_connection_name="letsgodb:us-central1:free-trial-first-project",
+    )
+
+    settings.validate_database_configuration()
+    assert settings.cloud_sql_connection_name == "letsgodb:us-central1:free-trial-first-project"
+
+
 def test_non_production_settings_allow_sqlite_fallback() -> None:
     settings = config.Settings()
 

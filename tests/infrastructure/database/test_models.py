@@ -156,6 +156,20 @@ def test_create_database_engine_supports_postgresql_psycopg_urls() -> None:
         engine.dispose()
 
 
+def test_create_database_engine_supports_cloud_sql_unix_socket_urls() -> None:
+    engine = create_database_engine(
+        "postgresql+psycopg://letsgodev:password@/letsgo"
+        "?host=/cloudsql/letsgodb:us-central1:free-trial-first-project"
+    )
+
+    try:
+        assert engine.dialect.name == "postgresql"
+        assert engine.url.drivername == "postgresql+psycopg"
+        assert engine.url.query["host"] == "/cloudsql/letsgodb:us-central1:free-trial-first-project"
+    finally:
+        engine.dispose()
+
+
 def test_package_publication_status_persists_lowercase_values_for_postgresql() -> None:
     bind_processor = Package.__table__.c.status.type.bind_processor(postgresql.dialect())
 

@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+from collections.abc import Iterator
 from typing import Annotated
 
 from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from sqlalchemy.orm import Session
 
 from app.auth.firebase_auth import (
     FirebaseAuthService,
@@ -47,6 +49,15 @@ def get_booking_service(request: Request) -> BookingService:
 
 def get_storage_service(request: Request) -> StorageService:
     return request.app.state.storage_service
+
+
+def get_db_session(request: Request) -> Iterator[Session]:
+    session_factory = request.app.state.db_session_factory
+    session = session_factory()
+    try:
+        yield session
+    finally:
+        session.close()
 
 
 def get_current_user(
