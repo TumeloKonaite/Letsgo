@@ -18,5 +18,5 @@ def get_authenticated_user(
         "sub": current_user.subject,
         "username": current_user.username,
         "email": current_user.email,
-        "roles": sorted(current_user.roles),
+        "claims": current_user.claims,
     }

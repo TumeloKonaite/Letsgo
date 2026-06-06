@@ -2,18 +2,14 @@ from pathlib import Path
 
 from fastapi.testclient import TestClient
 
-from app.core.config import Settings
 from app.main import create_application
+from tests.api.firebase_auth_helpers import build_test_settings
 
 
 def test_packages_endpoint_allows_vite_origin(tmp_path: Path) -> None:
     application = create_application(
-        settings=Settings(
-            database_url=f"sqlite:///{tmp_path / 'test-cors.db'}",
-            keycloak_issuer="https://keycloak.example.com/realms/letsgosa",
-            keycloak_audience="letsgosa-admin",
-            keycloak_jwks_url="https://keycloak.example.com/realms/letsgosa/protocol/openid-connect/certs",
-            keycloak_admin_role="admin",
+        settings=build_test_settings(
+            f"sqlite:///{tmp_path / 'test-cors.db'}",
             cors_allow_origins=("http://localhost:5173",),
         )
     )

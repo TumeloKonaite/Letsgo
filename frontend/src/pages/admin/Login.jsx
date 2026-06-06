@@ -29,14 +29,14 @@ export function Login() {
             <span className="eyebrow-dark">Admin access</span>
             <h1>Sign in to manage packages</h1>
             <p>
-              Admin pages use Keycloak authentication. Public pages remain open,
-              but package-management routes require a valid bearer token.
+              Admin pages use Firebase Auth with Google sign-in. Public pages remain
+              open, but package-management routes require a valid Firebase ID token.
             </p>
 
             {!isReady ? (
               <StatusPanel
                 title="Preparing login"
-                message="Loading the Keycloak client and checking for an existing admin session."
+                message="Checking for an existing Firebase admin session."
               />
             ) : null}
 
@@ -50,8 +50,8 @@ export function Login() {
 
             {!isConfigured ? (
               <StatusPanel
-                title="Missing Keycloak configuration"
-                message="Add VITE_KEYCLOAK_URL, VITE_KEYCLOAK_REALM, and VITE_KEYCLOAK_CLIENT_ID to the frontend environment."
+                title="Missing Firebase configuration"
+                message="Add the Vite Firebase web config values before opening admin pages."
                 tone="error"
               />
             ) : null}
@@ -66,7 +66,7 @@ export function Login() {
                 }}
                 disabled={!isReady || !isConfigured}
               >
-                Log in with Keycloak
+                Sign in with Google
               </button>
               <Link className="button-secondary" to="/">
                 Back to public site
