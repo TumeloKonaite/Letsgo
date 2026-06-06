@@ -121,6 +121,27 @@ def test_create_package_duplicate_slug_fails(admin_packages_client: AdminPackage
     assert response.json() == {"detail": "Package slug already exists"}
 
 
+def test_get_package_success(admin_packages_client: AdminPackagesClient) -> None:
+    response = admin_packages_client.client.get(
+        f"/api/admin/packages/{admin_packages_client.package_id}",
+        headers=_admin_headers(),
+    )
+
+    assert response.status_code == 200
+    assert response.json()["id"] == admin_packages_client.package_id
+    assert response.json()["slug"] == "existing-package"
+
+
+def test_get_missing_package_fails(admin_packages_client: AdminPackagesClient) -> None:
+    response = admin_packages_client.client.get(
+        "/api/admin/packages/999999",
+        headers=_admin_headers(),
+    )
+
+    assert response.status_code == 404
+    assert response.json() == {"detail": "Package not found"}
+
+
 def test_update_package_success(admin_packages_client: AdminPackagesClient) -> None:
     response = admin_packages_client.client.patch(
         f"/api/admin/packages/{admin_packages_client.package_id}",

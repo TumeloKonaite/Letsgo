@@ -4,6 +4,7 @@ from decimal import Decimal
 from sqlalchemy import CheckConstraint
 from sqlalchemy import create_engine, text
 from sqlalchemy import inspect as sa_inspect
+from sqlalchemy.dialects import postgresql
 
 from app.infrastructure.database.models import (
     Base,
@@ -16,7 +17,7 @@ from app.infrastructure.database.models import (
     PackageItineraryItem,
     PackagePublicationStatus,
 )
-from app.infrastructure.database.session import initialize_database
+from app.infrastructure.database.session import REQUIRED_TABLES, create_database_engine, initialize_database
 
 
 def test_models_are_importable_and_registered() -> None:
@@ -141,6 +142,44 @@ def test_package_constraints_cover_public_display_ordering() -> None:
 
     assert "display_order >= 0" in constraints
     assert "sort_order >= 0" in itinerary_constraints
+
+
+def test_create_database_engine_supports_postgresql_psycopg_urls() -> None:
+    engine = create_database_engine(
+        "postgresql+psycopg://user:password@db.example.com:5432/letsgosa_prod"
+    )
+
+    try:
+        assert engine.dialect.name == "postgresql"
+        assert engine.url.drivername == "postgresql+psycopg"
+    finally:
+        engine.dispose()
+
+
+def test_package_publication_status_persists_lowercase_values_for_postgresql() -> None:
+    bind_processor = Package.__table__.c.status.type.bind_processor(postgresql.dialect())
+
+    assert bind_processor is not None
+    assert bind_processor(PackagePublicationStatus.DRAFT) == "draft"
+
+
+def test_booking_status_persists_lowercase_values_for_postgresql() -> None:
+    bind_processor = Booking.__table__.c.status.type.bind_processor(postgresql.dialect())
+
+    assert bind_processor is not None
+    assert bind_processor(BookingStatus.NEW) == "new"
+
+
+def test_initialize_database_creates_expected_tables_for_sqlite(tmp_path) -> None:
+    engine = create_engine(f"sqlite:///{tmp_path / 'schema.db'}")
+
+    try:
+        initialize_database(engine)
+
+        table_names = set(sa_inspect(engine).get_table_names())
+        assert REQUIRED_TABLES.issubset(table_names)
+    finally:
+        engine.dispose()
 
 
 def test_initialize_database_adds_storage_key_column_for_existing_tables(tmp_path) -> None:

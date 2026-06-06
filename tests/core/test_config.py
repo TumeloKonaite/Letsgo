@@ -1,6 +1,7 @@
 from pathlib import Path
 
 from app.core import config
+import pytest
 
 
 def test_load_dotenv_sets_missing_environment_values(monkeypatch, tmp_path: Path) -> None:
@@ -59,3 +60,32 @@ def test_settings_parse_cors_origins_from_comma_separated_env(monkeypatch) -> No
         "https://letsgosouth.africa",
         "http://127.0.0.1:4173",
     )
+
+
+def test_production_settings_reject_sqlite_database_urls() -> None:
+    settings = config.Settings(
+        environment="production",
+        database_url="sqlite:///./letsgosa.db",
+    )
+
+    with pytest.raises(
+        ValueError,
+        match="Production requires PostgreSQL via LETSGOSA_DATABASE_URL",
+    ):
+        settings.validate_database_configuration()
+
+
+def test_production_settings_accept_postgresql_psycopg_database_urls() -> None:
+    settings = config.Settings(
+        environment="production",
+        database_url="postgresql+psycopg://user:password@db.example.com:5432/letsgosa_prod",
+    )
+
+    settings.validate_database_configuration()
+
+
+def test_non_production_settings_allow_sqlite_fallback() -> None:
+    settings = config.Settings()
+
+    settings.validate_database_configuration()
+    assert settings.database_url == config.DEFAULT_DATABASE_URL

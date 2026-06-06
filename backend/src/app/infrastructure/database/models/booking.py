@@ -9,6 +9,10 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.infrastructure.database.models.base import Base, TimestampMixin
 
 
+def _enum_values(enum_cls: type[Enum]) -> list[str]:
+    return [member.value for member in enum_cls]
+
+
 class BookingStatus(str, Enum):
     NEW = "new"
     CONTACTED = "contacted"
@@ -41,6 +45,7 @@ class Booking(TimestampMixin, Base):
             name="booking_status",
             native_enum=False,
             validate_strings=True,
+            values_callable=_enum_values,
         ),
         nullable=False,
         default=BookingStatus.NEW,

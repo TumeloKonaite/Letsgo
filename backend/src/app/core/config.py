@@ -11,6 +11,7 @@ DEFAULT_API_VERSION = "0.1.0"
 DEFAULT_HOST = "0.0.0.0"
 DEFAULT_PORT = 8000
 DEFAULT_DATABASE_URL = "sqlite:///./letsgosa.db"
+PRODUCTION_ENVIRONMENTS = frozenset({"prod", "production"})
 DEFAULT_KEYCLOAK_TIMEOUT_SECONDS = 5.0
 DEFAULT_STORAGE_PROVIDER = "minio"
 DEFAULT_MINIO_ENDPOINT = "localhost:9000"
@@ -97,6 +98,14 @@ class Settings:
     package_image_max_upload_bytes: int = DEFAULT_PACKAGE_IMAGE_MAX_UPLOAD_BYTES
     cors_allow_origins: tuple[str, ...] = DEFAULT_CORS_ALLOW_ORIGINS
 
+    @property
+    def normalized_environment(self) -> str:
+        return self.environment.strip().lower()
+
+    @property
+    def is_production(self) -> bool:
+        return self.normalized_environment in PRODUCTION_ENVIRONMENTS
+
     @classmethod
     def from_env(cls) -> "Settings":
         _load_dotenv()
@@ -171,6 +180,26 @@ class Settings:
         if missing:
             names = ", ".join(missing)
             raise ValueError(f"Missing required storage configuration: {names}")
+
+    def validate_database_configuration(self) -> None:
+        database_url = self.database_url.strip()
+        if not database_url:
+            raise ValueError("LETSGOSA_DATABASE_URL must not be empty")
+
+        if not self.is_production:
+            return
+
+        if database_url.startswith("sqlite"):
+            raise ValueError(
+                "Production requires PostgreSQL via LETSGOSA_DATABASE_URL; "
+                "SQLite is only supported for local development and testing"
+            )
+
+        if not database_url.startswith("postgresql"):
+            raise ValueError(
+                "Production LETSGOSA_DATABASE_URL must use a PostgreSQL driver, "
+                "for example postgresql+psycopg://USER:PASSWORD@HOST:5432/letsgosa_prod"
+            )
 
 
 @lru_cache

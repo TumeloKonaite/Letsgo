@@ -21,6 +21,16 @@ class PostgresPackageRepository:
     def __init__(self, session_factory: sessionmaker[Session]) -> None:
         self._session_factory = session_factory
 
+    def list_all_packages(self) -> list[PackageRecord]:
+        with self._session_factory() as session:
+            statement = select(Package).order_by(
+                Package.display_order.asc(),
+                Package.created_at.desc(),
+                Package.id.desc(),
+            )
+            packages = session.scalars(statement).all()
+            return [self._to_package_record(package) for package in packages]
+
     def create(self, package_data: PackageCreateData) -> PackageRecord:
         with self._session_factory() as session:
             package = Package(
