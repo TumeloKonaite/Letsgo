@@ -18,10 +18,15 @@ REQUIRED_TABLES = frozenset(
 
 def create_database_engine(database_url: str) -> Engine:
     connect_args: dict[str, bool] = {}
+    engine_kwargs: dict[str, object] = {}
     if database_url.startswith("sqlite"):
         connect_args["check_same_thread"] = False
+    else:
+        # Cloud SQL connections can stay in the pool across instance reuse, so
+        # pre-ping each checkout to fail fast on stale connections.
+        engine_kwargs["pool_pre_ping"] = True
 
-    return create_engine(database_url, connect_args=connect_args)
+    return create_engine(database_url, connect_args=connect_args, **engine_kwargs)
 
 
 def create_session_factory(engine: Engine) -> sessionmaker[Session]:
@@ -43,6 +48,10 @@ def initialize_database(engine: Engine) -> None:
 def _verify_database_connection(engine: Engine) -> None:
     with engine.connect() as connection:
         connection.execute(text("SELECT 1"))
+
+
+def verify_session_connection(session: Session) -> None:
+    session.execute(text("SELECT 1"))
 
 
 def _verify_required_tables(engine: Engine) -> None:

@@ -84,6 +84,7 @@ class Settings:
     port: int = DEFAULT_PORT
     database_url: str = DEFAULT_DATABASE_URL
     google_cloud_project: str | None = None
+    cloud_sql_connection_name: str | None = None
     firebase_project_id: str | None = None
     firebase_admin_role: str = DEFAULT_FIREBASE_ADMIN_ROLE
     storage_provider: str = DEFAULT_STORAGE_PROVIDER
@@ -117,6 +118,7 @@ class Settings:
             port=int(os.getenv("LETSGOSA_PORT", str(DEFAULT_PORT))),
             database_url=os.getenv("LETSGOSA_DATABASE_URL", DEFAULT_DATABASE_URL),
             google_cloud_project=os.getenv("GOOGLE_CLOUD_PROJECT") or os.getenv("FIREBASE_PROJECT_ID"),
+            cloud_sql_connection_name=os.getenv("CLOUD_SQL_CONNECTION_NAME"),
             firebase_project_id=os.getenv("FIREBASE_PROJECT_ID") or os.getenv("GOOGLE_CLOUD_PROJECT"),
             firebase_admin_role=os.getenv("FIREBASE_ADMIN_ROLE", DEFAULT_FIREBASE_ADMIN_ROLE),
             storage_provider=os.getenv("STORAGE_PROVIDER", DEFAULT_STORAGE_PROVIDER),

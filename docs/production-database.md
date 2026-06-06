@@ -69,10 +69,51 @@ Production deployments must set:
 
 ```env
 LETSGOSA_ENV=production
-LETSGOSA_DATABASE_URL=postgresql+psycopg://USER:PASSWORD@HOST:5432/letsgosa_prod
+LETSGOSA_DATABASE_URL=postgresql+psycopg://letsgodev:PASSWORD@/letsgo?host=/cloudsql/letsgodb:us-central1:free-trial-first-project
+GOOGLE_CLOUD_PROJECT=letsgodb
+CLOUD_SQL_CONNECTION_NAME=letsgodb:us-central1:free-trial-first-project
 ```
 
-The backend accepts SQLAlchemy PostgreSQL URLs using the `psycopg` driver, including the standard Cloud SQL host form above.
+The backend accepts SQLAlchemy PostgreSQL URLs using the `psycopg` driver, including Cloud SQL Unix socket URLs in the form shown above.
+
+Keep the password in Secret Manager or your deployment secret store. Do not commit it to Git.
+
+## Cloud Run wiring
+
+Attach the Cloud SQL instance to the service so Cloud Run mounts `/cloudsql/<PROJECT:REGION:INSTANCE>` inside the container:
+
+```powershell
+gcloud run deploy letsgosa-api `
+  --source . `
+  --region us-central1 `
+  --add-cloudsql-instances letsgodb:us-central1:free-trial-first-project
+```
+
+Set non-secret environment variables on the service:
+
+```powershell
+gcloud run services update letsgosa-api `
+  --region us-central1 `
+  --set-env-vars LETSGOSA_ENV=production,GOOGLE_CLOUD_PROJECT=letsgodb,CLOUD_SQL_CONNECTION_NAME=letsgodb:us-central1:free-trial-first-project
+```
+
+Then inject `LETSGOSA_DATABASE_URL` as a secret-backed environment variable with this value pattern:
+
+```env
+postgresql+psycopg://letsgodev:PASSWORD@/letsgo?host=/cloudsql/letsgodb:us-central1:free-trial-first-project
+```
+
+That keeps credentials out of the image, the repo, and the deploy command history.
+
+## Local verification against Cloud SQL
+
+For local development against the managed instance, run the Cloud SQL Auth Proxy and point `LETSGOSA_DATABASE_URL` at the local TCP port:
+
+```powershell
+.\cloud-sql-proxy.exe --port 6543 letsgodb:us-central1:free-trial-first-project
+$env:LETSGOSA_ENV="production"
+$env:LETSGOSA_DATABASE_URL="postgresql+psycopg://letsgodev:YOUR_PASSWORD@127.0.0.1:6543/letsgo?sslmode=disable"
+```
 
 ## Migrations
 
@@ -81,7 +122,7 @@ Install dependencies and run Alembic before starting the API in any non-SQLite e
 ```powershell
 uv sync
 $env:LETSGOSA_ENV="production"
-$env:LETSGOSA_DATABASE_URL="postgresql+psycopg://USER:PASSWORD@HOST:5432/letsgosa_prod"
+$env:LETSGOSA_DATABASE_URL="postgresql+psycopg://letsgodev:YOUR_PASSWORD@/letsgo?host=/cloudsql/letsgodb:us-central1:free-trial-first-project"
 uv run alembic upgrade head
 ```
 
@@ -121,6 +162,7 @@ uv run python -m uvicorn app.main:app --app-dir backend/src --host 0.0.0.0 --por
 
 Then verify:
 
+- `GET /health/db` returns `{"status":"ok","database":"connected"}`
 - `GET /api/packages` reads published package data from PostgreSQL
 - `POST /api/admin/packages`, `PATCH /api/admin/packages/{id}`, and `DELETE /api/admin/packages/{id}` create, update, and delete PostgreSQL-backed data
 
