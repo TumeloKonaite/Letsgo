@@ -37,16 +37,10 @@ class FakeStorageService:
         self.uploads.pop(object_name, None)
 
     def get_public_url(self, object_name: str) -> str:
-        return f"http://localhost:9000/package-images/{object_name}"
-
-    def get_presigned_url(self, object_name: str, hours: int = 1) -> str:
-        return (
-            f"http://localhost:9000/package-images/{object_name}"
-            f"?X-Amz-Expires={hours * 3600}&X-Amz-Signature=test"
-        )
+        return f"https://storage.googleapis.com/letsgosa-package-images/{object_name}"
 
     def extract_object_name(self, url: str) -> str | None:
-        prefix = "http://localhost:9000/package-images/"
+        prefix = "https://storage.googleapis.com/letsgosa-package-images/"
         if not url.startswith(prefix):
             return None
         return url[len(prefix) :].split("?", 1)[0]
@@ -125,8 +119,9 @@ def test_authenticated_admin_can_upload_images(package_images_client: PackageIma
     assert payload["alt_text"] == "Table Mountain view"
     assert payload["display_order"] == 1
     assert payload["is_cover"] is True
-    assert payload["url"].startswith("http://localhost:9000/package-images/packages/cape-town-explorer/")
-    assert "X-Amz-Signature=test" in payload["url"]
+    assert payload["url"].startswith(
+        "https://storage.googleapis.com/letsgosa-package-images/packages/cape-town-explorer/"
+    )
     assert len(package_images_client.storage.uploads) == 1
 
 
@@ -203,8 +198,9 @@ def test_uploaded_image_metadata_is_persisted_and_listed(
     assert image.alt_text == "Coastline"
     assert image.sort_order == 3
     assert image.storage_key is not None
-    assert image.image_url.startswith("http://localhost:9000/package-images/packages/cape-town-explorer/")
-    assert "X-Amz-Signature" not in image.image_url
+    assert image.image_url.startswith(
+        "https://storage.googleapis.com/letsgosa-package-images/packages/cape-town-explorer/"
+    )
 
 
 def test_images_can_be_deleted(package_images_client: PackageImagesClient) -> None:

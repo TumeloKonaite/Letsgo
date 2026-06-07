@@ -50,18 +50,18 @@ def _build_service() -> PackageService:
 @dataclass
 class FakeStorageService:
     def extract_object_name(self, url: str) -> str | None:
-        prefix = "http://localhost:9000/package-images/"
+        prefix = "https://storage.googleapis.com/letsgosa-package-images/"
         if not url.startswith(prefix):
             return None
         return url[len(prefix) :]
 
-    def get_presigned_url(self, object_name: str, hours: int = 1) -> str:
-        return f"http://localhost:9000/package-images/{object_name}?signature=test"
+    def get_public_url(self, object_name: str) -> str:
+        return f"https://storage.googleapis.com/letsgosa-package-images/{object_name}"
 
 
 @dataclass
 class FailingStorageService(FakeStorageService):
-    def get_presigned_url(self, object_name: str, hours: int = 1) -> str:
+    def get_public_url(self, object_name: str) -> str:
         raise StorageError("Storage backend unavailable")
 
 
@@ -208,10 +208,10 @@ def test_delete_missing_package_fails() -> None:
         service.delete_package(999)
 
 
-def test_public_package_urls_are_presigned_for_storage_images() -> None:
+def test_public_package_urls_are_normalized_for_storage_images() -> None:
     storage_image = PackageImageRecord(
         id=10,
-        image_url="http://localhost:9000/package-images/packages/cape-town/hero.jpg",
+        image_url="https://storage.googleapis.com/letsgosa-package-images/packages/cape-town/hero.jpg",
         alt_text="Hero",
         sort_order=0,
         is_cover=True,
@@ -251,20 +251,20 @@ def test_public_package_urls_are_presigned_for_storage_images() -> None:
     detail_payload = service.get_published_package_by_slug("existing-package")
 
     assert list_payload[0].hero_image_url == (
-        "http://localhost:9000/package-images/packages/cape-town/hero.jpg?signature=test"
+        "https://storage.googleapis.com/letsgosa-package-images/packages/cape-town/hero.jpg"
     )
     assert detail_payload.hero_image_url == (
-        "http://localhost:9000/package-images/packages/cape-town/hero.jpg?signature=test"
+        "https://storage.googleapis.com/letsgosa-package-images/packages/cape-town/hero.jpg"
     )
     assert detail_payload.images[0].image_url == (
-        "http://localhost:9000/package-images/packages/cape-town/hero.jpg?signature=test"
+        "https://storage.googleapis.com/letsgosa-package-images/packages/cape-town/hero.jpg"
     )
 
 
 def test_public_package_urls_fall_back_to_stored_url_when_storage_is_unavailable() -> None:
     storage_image = PackageImageRecord(
         id=10,
-        image_url="http://localhost:9000/package-images/packages/cape-town/hero.jpg",
+        image_url="https://storage.googleapis.com/letsgosa-package-images/packages/cape-town/hero.jpg",
         alt_text="Hero",
         sort_order=0,
         is_cover=True,

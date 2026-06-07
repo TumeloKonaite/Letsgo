@@ -58,9 +58,6 @@ class StorageService(Protocol):
     def delete_image(self, object_name: str) -> None:
         """Delete an image from object storage."""
 
-    def get_presigned_url(self, object_name: str, hours: int = 1) -> str:
-        """Build a temporary download URL for a stored object."""
-
     def get_public_url(self, object_name: str) -> str:
         """Build the public URL for a stored object."""
 

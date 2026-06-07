@@ -49,7 +49,7 @@ def _next_display_order(package: Package) -> int:
 
 def _to_response(image: PackageImage, storage_service: StorageService) -> AdminPackageImageResponse:
     object_name = image.storage_key or storage_service.extract_object_name(image.image_url)
-    url = image.image_url if object_name is None else storage_service.get_presigned_url(object_name)
+    url = image.image_url if object_name is None else storage_service.get_public_url(object_name)
     return AdminPackageImageResponse(
         id=image.id,
         package_id=image.package_id,
