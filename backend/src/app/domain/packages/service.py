@@ -222,7 +222,7 @@ class PackageService:
             return image_url
 
         try:
-            return self._storage_service.get_presigned_url(object_name)
+            return self._storage_service.get_public_url(object_name)
         except StorageError:
             return image_url
 

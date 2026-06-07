@@ -70,10 +70,12 @@ Production deployments must set:
 ```env
 ENVIRONMENT=production
 LETSGOSA_DATABASE_URL=postgresql+psycopg://letsgodev:PASSWORD@/letsgo?host=/cloudsql/letsgodb:us-central1:free-trial-first-project
-GOOGLE_CLOUD_PROJECT=letsgodb
+GCP_PROJECT_ID=letsgodb
 CLOUD_SQL_CONNECTION_NAME=letsgodb:us-central1:free-trial-first-project
 FIREBASE_PROJECT_ID=letsgodb
 FIREBASE_ADMIN_ROLE=admin
+GCS_BUCKET_NAME=letsgosa-package-images
+GCS_PUBLIC_BASE_URL=https://storage.googleapis.com/letsgosa-package-images
 ```
 
 The backend accepts SQLAlchemy PostgreSQL URLs using the `psycopg` driver, including Cloud SQL Unix socket URLs in the form shown above.

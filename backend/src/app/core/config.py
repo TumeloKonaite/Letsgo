@@ -13,13 +13,7 @@ DEFAULT_PORT = 8000
 DEFAULT_DATABASE_URL = "sqlite:///./letsgosa.db"
 PRODUCTION_ENVIRONMENTS = frozenset({"prod", "production"})
 DEFAULT_FIREBASE_ADMIN_ROLE = "admin"
-DEFAULT_STORAGE_PROVIDER = "minio"
-DEFAULT_MINIO_ENDPOINT = "localhost:9000"
-DEFAULT_MINIO_ACCESS_KEY = "minioadmin"
-DEFAULT_MINIO_SECRET_KEY = "minioadmin"
-DEFAULT_MINIO_BUCKET = "package-images"
-DEFAULT_MINIO_SECURE = False
-DEFAULT_MINIO_REGION = "us-east-1"
+DEFAULT_STORAGE_PROVIDER = "gcs"
 DEFAULT_PACKAGE_IMAGE_MAX_UPLOAD_BYTES = 5 * 1024 * 1024
 DEFAULT_CORS_ALLOW_ORIGINS = (
     "http://localhost:5173",
@@ -85,17 +79,14 @@ class Settings:
     host: str = DEFAULT_HOST
     port: int = DEFAULT_PORT
     database_url: str = DEFAULT_DATABASE_URL
+    gcp_project_id: str | None = None
     google_cloud_project: str | None = None
     cloud_sql_connection_name: str | None = None
     firebase_project_id: str | None = None
     firebase_admin_role: str = DEFAULT_FIREBASE_ADMIN_ROLE
     storage_provider: str = DEFAULT_STORAGE_PROVIDER
-    minio_endpoint: str = DEFAULT_MINIO_ENDPOINT
-    minio_access_key: str = DEFAULT_MINIO_ACCESS_KEY
-    minio_secret_key: str = DEFAULT_MINIO_SECRET_KEY
-    minio_bucket: str = DEFAULT_MINIO_BUCKET
-    minio_secure: bool = DEFAULT_MINIO_SECURE
-    minio_region: str = DEFAULT_MINIO_REGION
+    gcs_bucket_name: str | None = None
+    gcs_public_base_url: str | None = None
     package_image_max_upload_bytes: int = DEFAULT_PACKAGE_IMAGE_MAX_UPLOAD_BYTES
     cors_allow_origins: tuple[str, ...] = DEFAULT_CORS_ALLOW_ORIGINS
 
@@ -110,6 +101,11 @@ class Settings:
     @classmethod
     def from_env(cls) -> "Settings":
         _load_dotenv()
+        resolved_project_id = (
+            os.getenv("GCP_PROJECT_ID")
+            or os.getenv("GOOGLE_CLOUD_PROJECT")
+            or os.getenv("FIREBASE_PROJECT_ID")
+        )
         return cls(
             app_name=os.getenv("LETSGOSA_APP_NAME", DEFAULT_APP_NAME),
             environment=(
@@ -127,17 +123,14 @@ class Settings:
                 or str(DEFAULT_PORT)
             ),
             database_url=os.getenv("LETSGOSA_DATABASE_URL", DEFAULT_DATABASE_URL),
-            google_cloud_project=os.getenv("GOOGLE_CLOUD_PROJECT") or os.getenv("FIREBASE_PROJECT_ID"),
+            gcp_project_id=resolved_project_id,
+            google_cloud_project=resolved_project_id,
             cloud_sql_connection_name=os.getenv("CLOUD_SQL_CONNECTION_NAME"),
-            firebase_project_id=os.getenv("FIREBASE_PROJECT_ID") or os.getenv("GOOGLE_CLOUD_PROJECT"),
+            firebase_project_id=os.getenv("FIREBASE_PROJECT_ID") or resolved_project_id,
             firebase_admin_role=os.getenv("FIREBASE_ADMIN_ROLE", DEFAULT_FIREBASE_ADMIN_ROLE),
             storage_provider=os.getenv("STORAGE_PROVIDER", DEFAULT_STORAGE_PROVIDER),
-            minio_endpoint=os.getenv("MINIO_ENDPOINT", DEFAULT_MINIO_ENDPOINT),
-            minio_access_key=os.getenv("MINIO_ACCESS_KEY", DEFAULT_MINIO_ACCESS_KEY),
-            minio_secret_key=os.getenv("MINIO_SECRET_KEY", DEFAULT_MINIO_SECRET_KEY),
-            minio_bucket=os.getenv("MINIO_BUCKET", DEFAULT_MINIO_BUCKET),
-            minio_secure=_as_bool(os.getenv("MINIO_SECURE"), default=DEFAULT_MINIO_SECURE),
-            minio_region=os.getenv("MINIO_REGION", DEFAULT_MINIO_REGION),
+            gcs_bucket_name=os.getenv("GCS_BUCKET_NAME"),
+            gcs_public_base_url=os.getenv("GCS_PUBLIC_BASE_URL"),
             package_image_max_upload_bytes=int(
                 os.getenv(
                     "PACKAGE_IMAGE_MAX_UPLOAD_BYTES",
@@ -165,16 +158,15 @@ class Settings:
 
     def validate_storage_configuration(self) -> None:
         provider = self.storage_provider.strip().lower()
-        if provider != "minio":
+        if provider != "gcs":
             raise ValueError(f"Unsupported storage provider: {self.storage_provider}")
 
         missing = [
             name
             for name, value in (
-                ("MINIO_ENDPOINT", self.minio_endpoint),
-                ("MINIO_ACCESS_KEY", self.minio_access_key),
-                ("MINIO_SECRET_KEY", self.minio_secret_key),
-                ("MINIO_BUCKET", self.minio_bucket),
+                ("GCP_PROJECT_ID", self.gcp_project_id),
+                ("GCS_BUCKET_NAME", self.gcs_bucket_name),
+                ("GCS_PUBLIC_BASE_URL", self.gcs_public_base_url),
             )
             if not value or not value.strip()
         ]

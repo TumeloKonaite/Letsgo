@@ -32,9 +32,12 @@ class StubFirebaseAuthService:
 def build_test_settings(database_url: str, **overrides) -> Settings:
     values = {
         "database_url": database_url,
+        "gcp_project_id": TEST_FIREBASE_PROJECT_ID,
         "google_cloud_project": TEST_FIREBASE_PROJECT_ID,
         "firebase_project_id": TEST_FIREBASE_PROJECT_ID,
         "firebase_admin_role": TEST_FIREBASE_ADMIN_CLAIM,
+        "gcs_bucket_name": "letsgosa-package-images",
+        "gcs_public_base_url": "https://storage.googleapis.com/letsgosa-package-images",
     }
     values.update(overrides)
     return Settings(

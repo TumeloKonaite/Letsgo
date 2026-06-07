@@ -11,9 +11,14 @@ BACKEND_SRC = PROJECT_ROOT / "backend" / "src"
 if str(BACKEND_SRC) not in sys.path:
     sys.path.insert(0, str(BACKEND_SRC))
 
-os.environ.setdefault("GOOGLE_CLOUD_PROJECT", "letsgodb")
+os.environ.setdefault("GCP_PROJECT_ID", "letsgodb")
 os.environ.setdefault("FIREBASE_PROJECT_ID", "letsgodb")
 os.environ.setdefault("FIREBASE_ADMIN_ROLE", "admin")
+os.environ.setdefault("GCS_BUCKET_NAME", "letsgosa-package-images")
+os.environ.setdefault(
+    "GCS_PUBLIC_BASE_URL",
+    "https://storage.googleapis.com/letsgosa-package-images",
+)
 
 from app.main import app
 

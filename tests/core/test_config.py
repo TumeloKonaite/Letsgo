@@ -9,7 +9,7 @@ def test_load_dotenv_sets_missing_environment_values(monkeypatch, tmp_path: Path
     dotenv_path.write_text(
         "\n".join(
             [
-                "GOOGLE_CLOUD_PROJECT=letsgodb",
+                "GCP_PROJECT_ID=letsgodb",
                 "FIREBASE_PROJECT_ID=letsgodb",
                 'FIREBASE_ADMIN_ROLE="admin"',
             ]
@@ -17,14 +17,14 @@ def test_load_dotenv_sets_missing_environment_values(monkeypatch, tmp_path: Path
         encoding="utf-8",
     )
 
-    monkeypatch.delenv("GOOGLE_CLOUD_PROJECT", raising=False)
+    monkeypatch.delenv("GCP_PROJECT_ID", raising=False)
     monkeypatch.delenv("FIREBASE_PROJECT_ID", raising=False)
     monkeypatch.delenv("FIREBASE_ADMIN_ROLE", raising=False)
     monkeypatch.setattr(config, "_find_dotenv_path", lambda: dotenv_path)
 
     config._load_dotenv()
 
-    assert config.os.environ["GOOGLE_CLOUD_PROJECT"] == "letsgodb"
+    assert config.os.environ["GCP_PROJECT_ID"] == "letsgodb"
     assert config.os.environ["FIREBASE_PROJECT_ID"] == "letsgodb"
     assert config.os.environ["FIREBASE_ADMIN_ROLE"] == "admin"
 

@@ -14,11 +14,13 @@ The repo includes a root [Dockerfile](/c:/Users/l/Documents/letsgosa/Dockerfile)
 Non-secret runtime variables live in [deploy/cloudrun/backend.env.yaml](/c:/Users/l/Documents/letsgosa/deploy/cloudrun/backend.env.yaml):
 
 ```yaml
-GOOGLE_CLOUD_PROJECT: letsgodb
+GCP_PROJECT_ID: letsgodb
 FIREBASE_PROJECT_ID: letsgodb
 FIREBASE_ADMIN_ROLE: admin
 ENVIRONMENT: production
 CLOUD_SQL_CONNECTION_NAME: letsgodb:us-central1:free-trial-first-project
+GCS_BUCKET_NAME: letsgosa-package-images
+GCS_PUBLIC_BASE_URL: https://storage.googleapis.com/letsgosa-package-images
 LETSGOSA_CORS_ALLOW_ORIGINS: https://letsgodb.web.app,https://letsgodb.firebaseapp.com
 ```
 
@@ -66,6 +68,37 @@ For the default Cloud Run runtime service account in project `458140268449`, run
 ```
 
 If the service uses a different runtime service account, grant `roles/secretmanager.secretAccessor` to that account instead.
+
+## Package image bucket
+
+Create the package image bucket once:
+
+```powershell
+& 'C:\Users\l\AppData\Local\Google\Cloud SDK\google-cloud-sdk\bin\gcloud.cmd' storage buckets create gs://letsgosa-package-images `
+  --project letsgodb `
+  --location us-central1 `
+  --uniform-bucket-level-access
+```
+
+Grant the Cloud Run runtime service account object-write access on that bucket:
+
+```powershell
+& 'C:\Users\l\AppData\Local\Google\Cloud SDK\google-cloud-sdk\bin\gcloud.cmd' storage buckets add-iam-policy-binding gs://letsgosa-package-images `
+  --project letsgodb `
+  --member="serviceAccount:458140268449-compute@developer.gserviceaccount.com" `
+  --role="roles/storage.objectAdmin"
+```
+
+If the service uses a different runtime service account, bind `roles/storage.objectAdmin` for that account instead.
+
+To serve package images directly from `https://storage.googleapis.com/letsgosa-package-images/...`, make the bucket objects publicly readable:
+
+```powershell
+& 'C:\Users\l\AppData\Local\Google\Cloud SDK\google-cloud-sdk\bin\gcloud.cmd' storage buckets add-iam-policy-binding gs://letsgosa-package-images `
+  --project letsgodb `
+  --member="allUsers" `
+  --role="roles/storage.objectViewer"
+```
 
 ## Deploy
 

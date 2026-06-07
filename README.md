@@ -14,6 +14,7 @@ uv run python -m uvicorn app.main:app --app-dir backend/src --reload
 The API is served at `http://localhost:8000`, public package routes are available under `/api/packages`, and the database readiness check is exposed at `/health/db`.
 
 SQLite remains the default local fallback when `LETSGOSA_DATABASE_URL` is not set. Production must use PostgreSQL through `LETSGOSA_DATABASE_URL`; see [docs/production-database.md](/c:/Users/l/Documents/letsgosa/docs/production-database.md).
+Package images are stored in Google Cloud Storage and the backend expects `GCP_PROJECT_ID`, `GCS_BUCKET_NAME`, and `GCS_PUBLIC_BASE_URL` to be configured.
 For the Cloud Run deployment flow used in PR 19, see [docs/backend-cloud-run.md](/c:/Users/l/Documents/letsgosa/docs/backend-cloud-run.md).
 
 ## Managed PostgreSQL
