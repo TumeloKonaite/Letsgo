@@ -20,7 +20,7 @@ from app.domain.packages.repository import (
     PackageRecord,
     PackageRepository,
 )
-from app.domain.packages.storage import StorageService
+from app.domain.packages.storage import StorageError, StorageService
 
 
 class PackageNotFoundError(Exception):
@@ -221,7 +221,10 @@ class PackageService:
         if object_name is None:
             return image_url
 
-        return self._storage_service.get_presigned_url(object_name)
+        try:
+            return self._storage_service.get_presigned_url(object_name)
+        except StorageError:
+            return image_url
 
     def _validate_package(self, price_from, duration_days: int) -> None:
         if price_from < 0:

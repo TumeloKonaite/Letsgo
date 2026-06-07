@@ -17,6 +17,7 @@ from app.domain.packages.service import (
     PackageNotFoundError,
     PackageService,
 )
+from app.domain.packages.storage import StorageError
 from app.infrastructure.database.models import PackagePublicationStatus
 from app.infrastructure.packages.in_memory_package_repository import InMemoryPackageRepository
 
@@ -56,6 +57,12 @@ class FakeStorageService:
 
     def get_presigned_url(self, object_name: str, hours: int = 1) -> str:
         return f"http://localhost:9000/package-images/{object_name}?signature=test"
+
+
+@dataclass
+class FailingStorageService(FakeStorageService):
+    def get_presigned_url(self, object_name: str, hours: int = 1) -> str:
+        raise StorageError("Storage backend unavailable")
 
 
 @dataclass
@@ -252,3 +259,50 @@ def test_public_package_urls_are_presigned_for_storage_images() -> None:
     assert detail_payload.images[0].image_url == (
         "http://localhost:9000/package-images/packages/cape-town/hero.jpg?signature=test"
     )
+
+
+def test_public_package_urls_fall_back_to_stored_url_when_storage_is_unavailable() -> None:
+    storage_image = PackageImageRecord(
+        id=10,
+        image_url="http://localhost:9000/package-images/packages/cape-town/hero.jpg",
+        alt_text="Hero",
+        sort_order=0,
+        is_cover=True,
+    )
+    repository = PublishedPackageRepository(
+        list_item=PackageListItemRecord(
+            id=1,
+            slug="existing-package",
+            title="Existing Package",
+            short_description="Existing package.",
+            location="Cape Town",
+            duration_days=4,
+            price_from=Decimal("4500.00"),
+            currency="ZAR",
+            is_featured=False,
+            images=(storage_image,),
+        ),
+        detail_item=PackageDetailRecord(
+            id=1,
+            slug="existing-package",
+            title="Existing Package",
+            short_description="Existing package.",
+            full_description="Existing package description.",
+            location="Cape Town",
+            duration_days=4,
+            price_from=Decimal("4500.00"),
+            currency="ZAR",
+            is_featured=False,
+            images=(storage_image,),
+            itinerary=(),
+            availability=(),
+        ),
+    )
+    service = PackageService(repository=repository, storage_service=FailingStorageService())
+
+    list_payload = service.list_published_packages()
+    detail_payload = service.get_published_package_by_slug("existing-package")
+
+    assert list_payload[0].hero_image_url == storage_image.image_url
+    assert detail_payload.hero_image_url == storage_image.image_url
+    assert detail_payload.images[0].image_url == storage_image.image_url

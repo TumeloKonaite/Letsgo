@@ -110,12 +110,20 @@ class Settings:
         _load_dotenv()
         return cls(
             app_name=os.getenv("LETSGOSA_APP_NAME", DEFAULT_APP_NAME),
-            environment=os.getenv("LETSGOSA_ENV", DEFAULT_ENVIRONMENT),
+            environment=(
+                os.getenv("LETSGOSA_ENV")
+                or os.getenv("ENVIRONMENT")
+                or DEFAULT_ENVIRONMENT
+            ),
             debug=_as_bool(os.getenv("LETSGOSA_DEBUG"), default=DEFAULT_DEBUG),
             api_prefix=os.getenv("LETSGOSA_API_PREFIX", DEFAULT_API_PREFIX),
             api_version=os.getenv("LETSGOSA_API_VERSION", DEFAULT_API_VERSION),
             host=os.getenv("LETSGOSA_HOST", DEFAULT_HOST),
-            port=int(os.getenv("LETSGOSA_PORT", str(DEFAULT_PORT))),
+            port=int(
+                os.getenv("LETSGOSA_PORT")
+                or os.getenv("PORT")
+                or str(DEFAULT_PORT)
+            ),
             database_url=os.getenv("LETSGOSA_DATABASE_URL", DEFAULT_DATABASE_URL),
             google_cloud_project=os.getenv("GOOGLE_CLOUD_PROJECT") or os.getenv("FIREBASE_PROJECT_ID"),
             cloud_sql_connection_name=os.getenv("CLOUD_SQL_CONNECTION_NAME"),
