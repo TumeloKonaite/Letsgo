@@ -62,6 +62,11 @@ def test_settings_parse_cors_origins_from_comma_separated_env(monkeypatch) -> No
     )
 
 
+def test_default_cors_origins_include_firebase_hosting_domains() -> None:
+    assert "https://letsgodb.web.app" in config.DEFAULT_CORS_ALLOW_ORIGINS
+    assert "https://letsgodb.firebaseapp.com" in config.DEFAULT_CORS_ALLOW_ORIGINS
+
+
 def test_production_settings_reject_sqlite_database_urls() -> None:
     settings = config.Settings(
         environment="production",

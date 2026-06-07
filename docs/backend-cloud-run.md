@@ -19,6 +19,7 @@ FIREBASE_PROJECT_ID: letsgodb
 FIREBASE_ADMIN_ROLE: admin
 ENVIRONMENT: production
 CLOUD_SQL_CONNECTION_NAME: letsgodb:us-central1:free-trial-first-project
+LETSGOSA_CORS_ALLOW_ORIGINS: https://letsgodb.web.app,https://letsgodb.firebaseapp.com
 ```
 
 Store the database URL as a secret, not in Git:
@@ -28,6 +29,13 @@ LETSGOSA_DATABASE_URL=postgresql+psycopg://letsgodev:<DB_PASSWORD>@/letsgo?host=
 ```
 
 ## One-time secret setup
+
+Enable the Secret Manager API before the first deploy that uses `--set-secrets`:
+
+```powershell
+& 'C:\Users\l\AppData\Local\Google\Cloud SDK\google-cloud-sdk\bin\gcloud.cmd' services enable secretmanager.googleapis.com `
+  --project letsgodb
+```
 
 Create or update the secret that Cloud Run will expose as `LETSGOSA_DATABASE_URL`:
 
@@ -47,6 +55,17 @@ $env:LETSGOSA_DATABASE_URL | & 'C:\Users\l\AppData\Local\Google\Cloud SDK\google
 ```
 
 Grant the Cloud Run runtime service account access to the secret before deploying.
+
+For the default Cloud Run runtime service account in project `458140268449`, run:
+
+```powershell
+& 'C:\Users\l\AppData\Local\Google\Cloud SDK\google-cloud-sdk\bin\gcloud.cmd' secrets add-iam-policy-binding letsgosa-database-url `
+  --project letsgodb `
+  --member="serviceAccount:458140268449-compute@developer.gserviceaccount.com" `
+  --role="roles/secretmanager.secretAccessor"
+```
+
+If the service uses a different runtime service account, grant `roles/secretmanager.secretAccessor` to that account instead.
 
 ## Deploy
 
@@ -69,6 +88,40 @@ This deploy uses:
 - the repo-root [Dockerfile](/c:/Users/l/Documents/letsgosa/Dockerfile) for the build
 - Cloud Run port `8080`
 - Cloud SQL Unix socket mounting at `/cloudsql/letsgodb:us-central1:free-trial-first-project`
+
+## Redeploy
+
+For an ordinary backend code or config update, redeploy by rerunning the same `gcloud run deploy` command from the repository root:
+
+```powershell
+& 'C:\Users\l\AppData\Local\Google\Cloud SDK\google-cloud-sdk\bin\gcloud.cmd' run deploy letsgosa-backend `
+  --source . `
+  --region us-central1 `
+  --project letsgodb `
+  --allow-unauthenticated `
+  --port 8080 `
+  --add-cloudsql-instances letsgodb:us-central1:free-trial-first-project `
+  --env-vars-file deploy/cloudrun/backend.env.yaml `
+  --set-secrets LETSGOSA_DATABASE_URL=letsgosa-database-url:latest
+```
+
+Use this same flow after changing:
+
+- backend application code
+- [deploy/cloudrun/backend.env.yaml](/c:/Users/l/Documents/letsgosa/deploy/cloudrun/backend.env.yaml)
+- the Dockerfile used by Cloud Run
+
+Only update the secret itself when the production database URL changes. If the secret value changes, add a new version first:
+
+```powershell
+$env:LETSGOSA_DATABASE_URL | & 'C:\Users\l\AppData\Local\Google\Cloud SDK\google-cloud-sdk\bin\gcloud.cmd' secrets versions add letsgosa-database-url `
+  --project letsgodb `
+  --data-file=-
+```
+
+Then rerun the deploy command so Cloud Run points at `letsgosa-database-url:latest`.
+
+If a deploy fails during revision creation because Secret Manager is disabled or inaccessible, fix the API/permissions issue first, then rerun the same deploy command. The previous serving revision remains active until a new revision is created successfully.
 
 ## Post-deploy verification
 

@@ -85,17 +85,29 @@ npm install
 npm run dev
 ```
 
-The frontend reads `VITE_LETSGO_API_BASE_URL` and defaults to `http://localhost:8000` in the example file.
+The frontend reads `VITE_API_BASE_URL` for production and still accepts `VITE_LETSGO_API_BASE_URL` as a legacy alias for local overrides.
 
 ## Frontend environment
 
 ```env
-VITE_LETSGO_API_BASE_URL=http://localhost:8000
+VITE_API_BASE_URL=https://your-cloud-run-url
+```
+
+For production builds in this repo, [frontend/.env.production](/c:/Users/l/Documents/letsgosa/frontend/.env.production) points at the Cloud Run backend URL for PR 20. Firebase Hosting config lives in [frontend/firebase.json](/c:/Users/l/Documents/letsgosa/frontend/firebase.json) and [frontend/.firebaserc](/c:/Users/l/Documents/letsgosa/frontend/.firebaserc).
+
+## Frontend hosting
+
+Build and deploy the frontend from the `frontend` directory:
+
+```powershell
+npm run build
+npx firebase-tools deploy --only hosting --project letsgodb --config firebase.json
 ```
 
 ## Notes
 
 - The backend now allows cross-origin requests from `http://localhost:5173` and `http://127.0.0.1:5173` by default.
+- The backend production example also includes `https://letsgodb.web.app` and `https://letsgodb.firebaseapp.com` in `LETSGOSA_CORS_ALLOW_ORIGINS` so the hosted frontend can call Cloud Run.
 - Change `LETSGOSA_CORS_ALLOW_ORIGINS` in the root `.env` if you need different frontend origins.
 - Run database migrations with `uv run alembic upgrade head` before starting a non-SQLite environment.
 - Production should keep the database password in a secret store, not in `.env.example`, the repo, or Cloud Run command history.
