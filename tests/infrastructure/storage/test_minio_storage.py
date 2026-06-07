@@ -4,10 +4,12 @@ from dataclasses import dataclass, field
 
 import pytest
 from minio.error import S3Error
+from urllib3.exceptions import HTTPError
 
 from app.domain.packages.storage import (
     StorageAuthenticationError,
     StorageBucketNotFoundError,
+    StorageError,
 )
 from app.infrastructure.storage.minio_storage import MinioStorageService
 
@@ -132,3 +134,11 @@ def test_get_presigned_url_succeeds() -> None:
         "http://localhost:9000/package-images/packages/cape-town-tour/photo.jpg?signature=test"
     )
     assert client.presigned_calls
+
+
+def test_network_errors_are_wrapped_as_storage_errors() -> None:
+    client = FakeMinioClient(bucket_exists_error=HTTPError("connection refused"))
+    storage = _build_service(client)
+
+    with pytest.raises(StorageError, match="Storage request failed: HTTPError."):
+        storage.get_presigned_url("packages/cape-town-tour/photo.jpg")

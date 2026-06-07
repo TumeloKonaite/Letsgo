@@ -68,36 +68,24 @@ gcloud sql instances describe $env:INSTANCE_NAME `
 Production deployments must set:
 
 ```env
-LETSGOSA_ENV=production
+ENVIRONMENT=production
 LETSGOSA_DATABASE_URL=postgresql+psycopg://letsgodev:PASSWORD@/letsgo?host=/cloudsql/letsgodb:us-central1:free-trial-first-project
 GOOGLE_CLOUD_PROJECT=letsgodb
 CLOUD_SQL_CONNECTION_NAME=letsgodb:us-central1:free-trial-first-project
+FIREBASE_PROJECT_ID=letsgodb
+FIREBASE_ADMIN_ROLE=admin
 ```
 
 The backend accepts SQLAlchemy PostgreSQL URLs using the `psycopg` driver, including Cloud SQL Unix socket URLs in the form shown above.
+For backward compatibility, the app also accepts `LETSGOSA_ENV=production`, but Cloud Run documentation now uses `ENVIRONMENT=production`.
 
 Keep the password in Secret Manager or your deployment secret store. Do not commit it to Git.
 
 ## Cloud Run wiring
 
-Attach the Cloud SQL instance to the service so Cloud Run mounts `/cloudsql/<PROJECT:REGION:INSTANCE>` inside the container:
+Use the backend Cloud Run guide in [backend-cloud-run.md](/c:/Users/l/Documents/letsgosa/docs/backend-cloud-run.md) for the exact `letsgosa-backend` deployment commands and verification flow.
 
-```powershell
-gcloud run deploy letsgosa-api `
-  --source . `
-  --region us-central1 `
-  --add-cloudsql-instances letsgodb:us-central1:free-trial-first-project
-```
-
-Set non-secret environment variables on the service:
-
-```powershell
-gcloud run services update letsgosa-api `
-  --region us-central1 `
-  --set-env-vars LETSGOSA_ENV=production,GOOGLE_CLOUD_PROJECT=letsgodb,CLOUD_SQL_CONNECTION_NAME=letsgodb:us-central1:free-trial-first-project
-```
-
-Then inject `LETSGOSA_DATABASE_URL` as a secret-backed environment variable with this value pattern:
+Cloud Run must mount the Cloud SQL instance and inject `LETSGOSA_DATABASE_URL` as a secret-backed environment variable with this value pattern:
 
 ```env
 postgresql+psycopg://letsgodev:PASSWORD@/letsgo?host=/cloudsql/letsgodb:us-central1:free-trial-first-project

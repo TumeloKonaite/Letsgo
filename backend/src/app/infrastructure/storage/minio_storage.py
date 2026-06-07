@@ -6,6 +6,7 @@ from urllib.parse import quote, unquote, urlparse
 
 from minio import Minio
 from minio.error import InvalidResponseError, S3Error, ServerError
+from urllib3.exceptions import HTTPError
 
 from app.core.config import Settings
 from app.domain.packages.storage import (
@@ -48,7 +49,7 @@ class MinioStorageService(StorageService):
                 length=len(content),
                 content_type=content_type,
             )
-        except (S3Error, InvalidResponseError, ServerError) as exc:
+        except (S3Error, InvalidResponseError, ServerError, HTTPError, OSError) as exc:
             self._raise_storage_error(exc)
 
         return StoredObject(
@@ -67,7 +68,7 @@ class MinioStorageService(StorageService):
                 file_path=file_path,
                 content_type=content_type,
             )
-        except (S3Error, InvalidResponseError, ServerError) as exc:
+        except (S3Error, InvalidResponseError, ServerError, HTTPError, OSError) as exc:
             self._raise_storage_error(exc)
 
     def delete_image(self, object_name: str) -> None:
@@ -80,7 +81,7 @@ class MinioStorageService(StorageService):
                 bucket_name=self._bucket,
                 object_name=object_name,
             )
-        except (S3Error, InvalidResponseError, ServerError) as exc:
+        except (S3Error, InvalidResponseError, ServerError, HTTPError, OSError) as exc:
             if isinstance(exc, S3Error) and exc.code == "NoSuchKey":
                 return
             self._raise_storage_error(exc)
@@ -93,7 +94,7 @@ class MinioStorageService(StorageService):
                 object_name=object_name,
                 expires=timedelta(hours=hours),
             )
-        except (S3Error, InvalidResponseError, ServerError) as exc:
+        except (S3Error, InvalidResponseError, ServerError, HTTPError, OSError) as exc:
             self._raise_storage_error(exc)
 
     def get_public_url(self, object_name: str) -> str:
@@ -110,7 +111,7 @@ class MinioStorageService(StorageService):
     def _ensure_bucket_exists(self) -> None:
         try:
             bucket_exists = self._client.bucket_exists(self._bucket)
-        except (S3Error, InvalidResponseError, ServerError) as exc:
+        except (S3Error, InvalidResponseError, ServerError, HTTPError, OSError) as exc:
             self._raise_storage_error(exc)
 
         if not bucket_exists:
@@ -118,7 +119,7 @@ class MinioStorageService(StorageService):
 
     def _raise_storage_error(
         self,
-        exc: S3Error | InvalidResponseError | ServerError,
+        exc: S3Error | InvalidResponseError | ServerError | HTTPError | OSError,
     ) -> None:
         if isinstance(exc, S3Error):
             if exc.code in {"AccessDenied", "InvalidAccessKeyId", "SignatureDoesNotMatch"}:

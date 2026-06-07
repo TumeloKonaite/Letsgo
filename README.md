@@ -14,6 +14,7 @@ uv run python -m uvicorn app.main:app --app-dir backend/src --reload
 The API is served at `http://localhost:8000`, public package routes are available under `/api/packages`, and the database readiness check is exposed at `/health/db`.
 
 SQLite remains the default local fallback when `LETSGOSA_DATABASE_URL` is not set. Production must use PostgreSQL through `LETSGOSA_DATABASE_URL`; see [docs/production-database.md](/c:/Users/l/Documents/letsgosa/docs/production-database.md).
+For the Cloud Run deployment flow used in PR 19, see [docs/backend-cloud-run.md](/c:/Users/l/Documents/letsgosa/docs/backend-cloud-run.md).
 
 ## Managed PostgreSQL
 
@@ -66,34 +67,7 @@ If you need to inspect the tables in Cloud SQL, open `Cloud SQL Studio`, connect
 
 ### Cloud Run workflow
 
-Cloud Run should connect to Cloud SQL over the mounted Unix socket, not a hardcoded host:port pair.
-
-1. Attach the Cloud SQL instance to the service:
-
-```powershell
-gcloud run deploy letsgosa-api `
-  --source . `
-  --region us-central1 `
-  --add-cloudsql-instances letsgodb:us-central1:free-trial-first-project
-```
-
-2. Configure the non-secret runtime variables:
-
-```powershell
-gcloud run services update letsgosa-api `
-  --region us-central1 `
-  --set-env-vars LETSGOSA_ENV=production,GOOGLE_CLOUD_PROJECT=letsgodb,CLOUD_SQL_CONNECTION_NAME=letsgodb:us-central1:free-trial-first-project
-```
-
-3. Store `LETSGOSA_DATABASE_URL` in Secret Manager or Cloud Run secrets. The value should use the Unix socket path:
-
-```env
-postgresql+psycopg://letsgodev:PASSWORD@/letsgo?host=/cloudsql/letsgodb:us-central1:free-trial-first-project
-```
-
-4. Run `uv run alembic upgrade head` against the production database before shifting traffic to a new revision.
-
-5. Verify the deployed service with `GET /health/db`.
+Use the backend deployment guide in [docs/backend-cloud-run.md](/c:/Users/l/Documents/letsgosa/docs/backend-cloud-run.md). It covers the Cloud Run service name, region, Cloud SQL attachment, secret-backed database URL, and post-deploy verification for public and admin routes.
 
 ## Frontend setup
 
