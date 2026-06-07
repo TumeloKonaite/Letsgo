@@ -1,8 +1,14 @@
-const DEFAULT_API_BASE_URL = "http://localhost:8000";
+const DEFAULT_API_BASE_URL = import.meta.env.PROD
+  ? "https://letsgosa-backend-458140268449.us-central1.run.app"
+  : "http://localhost:8000";
+
+const legacyBaseUrl = import.meta.env.DEV
+  ? import.meta.env.VITE_LETSGO_API_BASE_URL?.trim()
+  : "";
 
 const configuredBaseUrl =
   import.meta.env.VITE_API_BASE_URL?.trim() ||
-  import.meta.env.VITE_LETSGO_API_BASE_URL?.trim() ||
+  legacyBaseUrl ||
   DEFAULT_API_BASE_URL;
 
 export const apiBaseUrl = configuredBaseUrl.replace(/\/+$/, "");
