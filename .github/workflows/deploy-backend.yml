@@ -1,0 +1,140 @@
+name: Deploy Backend
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: deploy-backend-production
+  cancel-in-progress: false
+
+env:
+  GCP_PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
+  GCP_REGION: ${{ vars.GCP_REGION }}
+  CLOUD_RUN_SERVICE: ${{ vars.CLOUD_RUN_SERVICE }}
+  ARTIFACT_REGISTRY_REPOSITORY: ${{ vars.ARTIFACT_REGISTRY_REPOSITORY }}
+  IMAGE_REGISTRY_HOST: ${{ vars.GCP_REGION }}-docker.pkg.dev
+  BACKEND_IMAGE_NAME: backend
+
+jobs:
+  deploy:
+    name: Build, Push, and Deploy
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        id: auth
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+          create_credentials_file: true
+          export_environment_variables: true
+
+      - name: Set up gcloud
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: ${{ env.GCP_PROJECT_ID }}
+
+      - name: Validate deployment configuration
+        shell: bash
+        env:
+          WORKLOAD_IDENTITY_PROVIDER: ${{ secrets.WORKLOAD_IDENTITY_PROVIDER }}
+          GCP_SERVICE_ACCOUNT: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+        run: |
+          set -euo pipefail
+
+          missing=()
+          for name in GCP_PROJECT_ID GCP_REGION CLOUD_RUN_SERVICE ARTIFACT_REGISTRY_REPOSITORY WORKLOAD_IDENTITY_PROVIDER GCP_SERVICE_ACCOUNT; do
+            if [[ -z "${!name:-}" ]]; then
+              missing+=("$name")
+            fi
+          done
+
+          if (( ${#missing[@]} > 0 )); then
+            printf 'Missing required GitHub variables or secrets: %s\n' "${missing[*]}" >&2
+            exit 1
+          fi
+
+      - name: Configure Docker for Artifact Registry
+        run: gcloud auth configure-docker "${IMAGE_REGISTRY_HOST}" --quiet
+
+      - name: Compute image tags
+        id: image
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          repository="${IMAGE_REGISTRY_HOST}/${GCP_PROJECT_ID}/${ARTIFACT_REGISTRY_REPOSITORY}/${BACKEND_IMAGE_NAME}"
+          echo "repository=${repository}" >> "$GITHUB_OUTPUT"
+          echo "image=${repository}:${GITHUB_SHA}" >> "$GITHUB_OUTPUT"
+          echo "latest=${repository}:latest" >> "$GITHUB_OUTPUT"
+
+      - name: Build backend image
+        run: |
+          docker build \
+            --file Dockerfile \
+            --tag "${{ steps.image.outputs.image }}" \
+            --tag "${{ steps.image.outputs.latest }}" \
+            .
+
+      - name: Push backend image
+        run: |
+          docker push "${{ steps.image.outputs.image }}"
+          docker push "${{ steps.image.outputs.latest }}"
+
+      - name: Deploy to Cloud Run
+        run: |
+          gcloud run deploy "${CLOUD_RUN_SERVICE}" \
+            --image "${{ steps.image.outputs.image }}" \
+            --region "${GCP_REGION}" \
+            --project "${GCP_PROJECT_ID}" \
+            --quiet
+
+      - name: Resolve Cloud Run URL
+        id: service
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          service_url="$(
+            gcloud run services describe "${CLOUD_RUN_SERVICE}" \
+              --region "${GCP_REGION}" \
+              --project "${GCP_PROJECT_ID}" \
+              --format='value(status.url)'
+          )"
+
+          if [[ -z "${service_url}" ]]; then
+            echo "Cloud Run service URL not found" >&2
+            exit 1
+          fi
+
+          echo "url=${service_url}" >> "$GITHUB_OUTPUT"
+
+      - name: Verify /health endpoint
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          health_url="${{ steps.service.outputs.url }}/health"
+          for attempt in {1..12}; do
+            if curl --fail --silent --show-error "${health_url}" > /dev/null; then
+              exit 0
+            fi
+
+            if [[ "${attempt}" -lt 12 ]]; then
+              sleep 10
+            fi
+          done
+
+          echo "Health check failed for ${health_url}" >&2
+          exit 1
