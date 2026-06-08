@@ -18,7 +18,9 @@ from app.infrastructure.database.session import (
     create_session_factory,
     initialize_database,
 )
-from app.infrastructure.packages.postgres_package_repository import PostgresPackageRepository
+from app.infrastructure.packages.postgres_package_repository import (
+    PostgresPackageRepository,
+)
 from app.infrastructure.storage import create_storage_service
 
 
@@ -48,7 +50,7 @@ def create_application(settings: Settings | None = None) -> FastAPI:
         app.state.booking_service = BookingService(repository=booking_repository)
         app.state.storage_service = storage_service
         app.state.firebase_auth_service = FirebaseAuthService(
-            initialize_firebase_app(resolved_settings)
+            app_factory=lambda: initialize_firebase_app(resolved_settings)
         )
         app.state.started = True
 

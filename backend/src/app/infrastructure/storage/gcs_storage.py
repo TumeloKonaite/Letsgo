@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Callable
 from io import BytesIO
 from urllib.parse import quote, unquote, urlparse
 
@@ -24,13 +25,24 @@ class GcsStorageService(StorageService):
         bucket_name: str,
         public_base_url: str,
         client: Client | None = None,
+        client_factory: Callable[[], Client] | None = None,
     ) -> None:
         self._project_id = project_id.strip()
         self._bucket_name = bucket_name.strip()
         self._public_base_url = public_base_url.rstrip("/")
-        self._client = client or Client(project=self._project_id)
+        self._client = client
+        self._client_factory = client_factory or (
+            lambda: Client(project=self._project_id)
+        )
 
-    def upload_image(self, object_name: str, content: bytes, content_type: str) -> StoredObject:
+    def _get_client(self) -> Client:
+        if self._client is None:
+            self._client = self._client_factory()
+        return self._client
+
+    def upload_image(
+        self, object_name: str, content: bytes, content_type: str
+    ) -> StoredObject:
         bucket = self._ensure_bucket_exists()
         blob = bucket.blob(object_name)
         try:
@@ -40,13 +52,17 @@ class GcsStorageService(StorageService):
                 content_type=content_type,
             )
         except (Forbidden, Unauthorized) as exc:
-            raise StorageAuthenticationError("Storage credentials were rejected.") from exc
+            raise StorageAuthenticationError(
+                "Storage credentials were rejected."
+            ) from exc
         except NotFound as exc:
             raise StorageBucketNotFoundError(
                 f"Storage bucket '{self._bucket_name}' was not found."
             ) from exc
         except (GoogleAPIError, OSError) as exc:
-            raise StorageError(f"Storage request failed: {type(exc).__name__}.") from exc
+            raise StorageError(
+                f"Storage request failed: {type(exc).__name__}."
+            ) from exc
 
         return StoredObject(
             object_name=object_name,
@@ -63,9 +79,13 @@ class GcsStorageService(StorageService):
         except NotFound:
             return
         except (Forbidden, Unauthorized) as exc:
-            raise StorageAuthenticationError("Storage credentials were rejected.") from exc
+            raise StorageAuthenticationError(
+                "Storage credentials were rejected."
+            ) from exc
         except (GoogleAPIError, OSError) as exc:
-            raise StorageError(f"Storage request failed: {type(exc).__name__}.") from exc
+            raise StorageError(
+                f"Storage request failed: {type(exc).__name__}."
+            ) from exc
 
     def get_public_url(self, object_name: str) -> str:
         return f"{self._public_base_url}/{quote(object_name, safe='/~')}"
@@ -88,20 +108,24 @@ class GcsStorageService(StorageService):
         return None
 
     def _ensure_bucket_exists(self) -> Bucket:
-        bucket = self._client.bucket(self._bucket_name)
+        bucket = self._get_client().bucket(self._bucket_name)
         try:
             if not bucket.exists():
                 raise StorageBucketNotFoundError(
                     f"Storage bucket '{self._bucket_name}' was not found."
                 )
         except (Forbidden, Unauthorized) as exc:
-            raise StorageAuthenticationError("Storage credentials were rejected.") from exc
+            raise StorageAuthenticationError(
+                "Storage credentials were rejected."
+            ) from exc
         except NotFound as exc:
             raise StorageBucketNotFoundError(
                 f"Storage bucket '{self._bucket_name}' was not found."
             ) from exc
         except (GoogleAPIError, OSError) as exc:
-            raise StorageError(f"Storage request failed: {type(exc).__name__}.") from exc
+            raise StorageError(
+                f"Storage request failed: {type(exc).__name__}."
+            ) from exc
         return bucket
 
 

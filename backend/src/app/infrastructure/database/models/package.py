@@ -44,7 +44,9 @@ class Package(TimestampMixin, Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     title: Mapped[str] = mapped_column(String(200), nullable=False)
-    slug: Mapped[str] = mapped_column(String(255), nullable=False, unique=True, index=True)
+    slug: Mapped[str] = mapped_column(
+        String(255), nullable=False, unique=True, index=True
+    )
     short_description: Mapped[str | None] = mapped_column(String(500))
     description: Mapped[str] = mapped_column(Text, nullable=False)
     destination: Mapped[str] = mapped_column(String(150), nullable=False, index=True)
@@ -65,8 +67,12 @@ class Package(TimestampMixin, Base):
         default=PackagePublicationStatus.DRAFT,
         index=True,
     )
-    is_published: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, index=True)
-    is_featured: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, index=True)
+    is_published: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, index=True
+    )
+    is_featured: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, index=True
+    )
     display_order: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
 
     images: Mapped[list[PackageImage]] = relationship(
@@ -191,9 +197,13 @@ class PackageAvailability(TimestampMixin, Base):
     __table_args__ = (
         CheckConstraint("capacity > 0", name="capacity_positive"),
         CheckConstraint("spots_available >= 0", name="spots_available_non_negative"),
-        CheckConstraint("spots_available <= capacity", name="spots_available_within_capacity"),
+        CheckConstraint(
+            "spots_available <= capacity", name="spots_available_within_capacity"
+        ),
         CheckConstraint("end_date >= start_date", name="date_range_valid"),
-        Index("ix_package_availability_package_id_start_date", "package_id", "start_date"),
+        Index(
+            "ix_package_availability_package_id_start_date", "package_id", "start_date"
+        ),
     )
 
 

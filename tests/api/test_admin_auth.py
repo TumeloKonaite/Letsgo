@@ -59,7 +59,9 @@ def admin_client(tmp_path) -> SeededAdminClient:
 
     with TestClient(application) as client:
         install_stub_firebase_auth(application)
-        package_id, image_id = _seed_existing_package(application.state.db_session_factory)
+        package_id, image_id = _seed_existing_package(
+            application.state.db_session_factory
+        )
         yield SeededAdminClient(client=client, package_id=package_id, image_id=image_id)
 
 
@@ -126,7 +128,13 @@ def test_valid_firebase_token_is_accepted(admin_client: SeededAdminClient) -> No
             None,
             None,
         ),
-        ("PATCH", "/api/admin/packages/{package_id}", {"title": "Patched Package"}, None, None),
+        (
+            "PATCH",
+            "/api/admin/packages/{package_id}",
+            {"title": "Patched Package"},
+            None,
+            None,
+        ),
         ("DELETE", "/api/admin/packages/{package_id}", None, None, None),
         (
             "POST",
@@ -135,7 +143,13 @@ def test_valid_firebase_token_is_accepted(admin_client: SeededAdminClient) -> No
             {"file": ("new-image.jpg", b"\xff\xd8\xfftest", "image/jpeg")},
             {"alt_text": "New image", "display_order": "1"},
         ),
-        ("DELETE", "/api/admin/packages/{package_id}/images/{image_id}", None, None, None),
+        (
+            "DELETE",
+            "/api/admin/packages/{package_id}/images/{image_id}",
+            None,
+            None,
+            None,
+        ),
     ],
 )
 def test_missing_token_returns_401_for_all_admin_package_mutations(
@@ -249,11 +263,15 @@ def test_user_without_admin_claim_receives_403(admin_client: SeededAdminClient) 
     assert response.json() == {"detail": "Admin claim required"}
 
 
-def test_application_fails_fast_when_firebase_configuration_is_missing(tmp_path) -> None:
+def test_application_fails_fast_when_firebase_configuration_is_missing(
+    tmp_path,
+) -> None:
     database_url = f"sqlite:///{tmp_path / 'missing-firebase.db'}"
 
     with pytest.raises(
         ValueError,
         match="Missing required Firebase configuration: FIREBASE_PROJECT_ID",
     ):
-        create_application(settings=build_test_settings(database_url, firebase_project_id=None))
+        create_application(
+            settings=build_test_settings(database_url, firebase_project_id=None)
+        )

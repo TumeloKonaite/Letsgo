@@ -61,8 +61,12 @@ def upgrade() -> None:
         sa.Column("duration_nights", sa.Integer(), nullable=False),
         sa.Column("price_from", sa.Numeric(precision=10, scale=2), nullable=False),
         sa.Column("currency", sa.String(length=3), nullable=False),
-        sa.Column("is_active", sa.Boolean(), nullable=False, server_default=sa.text("true")),
-        sa.Column("status", package_publication_status, nullable=False, server_default="draft"),
+        sa.Column(
+            "is_active", sa.Boolean(), nullable=False, server_default=sa.text("true")
+        ),
+        sa.Column(
+            "status", package_publication_status, nullable=False, server_default="draft"
+        ),
         sa.Column(
             "is_published",
             sa.Boolean(),
@@ -106,8 +110,12 @@ def upgrade() -> None:
         ),
         sa.PrimaryKeyConstraint("id", name=op.f("pk_packages")),
     )
-    op.create_index(op.f("ix_packages_destination"), "packages", ["destination"], unique=False)
-    op.create_index(op.f("ix_packages_is_featured"), "packages", ["is_featured"], unique=False)
+    op.create_index(
+        op.f("ix_packages_destination"), "packages", ["destination"], unique=False
+    )
+    op.create_index(
+        op.f("ix_packages_is_featured"), "packages", ["is_featured"], unique=False
+    )
     op.create_index(
         op.f("ix_packages_is_published"),
         "packages",
@@ -149,7 +157,12 @@ def upgrade() -> None:
         ),
         sa.PrimaryKeyConstraint("id", name=op.f("pk_package_images")),
     )
-    op.create_index(op.f("ix_package_images_package_id"), "package_images", ["package_id"], unique=False)
+    op.create_index(
+        op.f("ix_package_images_package_id"),
+        "package_images",
+        ["package_id"],
+        unique=False,
+    )
     op.create_index(
         "ix_package_images_package_id_sort_order",
         "package_images",
@@ -312,8 +325,15 @@ def upgrade() -> None:
         ["package_id", "status"],
         unique=False,
     )
-    op.create_index(op.f("ix_bookings_availability_id"), "bookings", ["availability_id"], unique=False)
-    op.create_index(op.f("ix_bookings_package_id"), "bookings", ["package_id"], unique=False)
+    op.create_index(
+        op.f("ix_bookings_availability_id"),
+        "bookings",
+        ["availability_id"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_bookings_package_id"), "bookings", ["package_id"], unique=False
+    )
     op.create_index(op.f("ix_bookings_status"), "bookings", ["status"], unique=False)
 
 
@@ -324,8 +344,12 @@ def downgrade() -> None:
     op.drop_index("ix_bookings_package_id_status", table_name="bookings")
     op.drop_table("bookings")
 
-    op.drop_index(op.f("ix_package_availability_status"), table_name="package_availability")
-    op.drop_index(op.f("ix_package_availability_package_id"), table_name="package_availability")
+    op.drop_index(
+        op.f("ix_package_availability_status"), table_name="package_availability"
+    )
+    op.drop_index(
+        op.f("ix_package_availability_package_id"), table_name="package_availability"
+    )
     op.drop_index(
         "ix_package_availability_package_id_start_date",
         table_name="package_availability",

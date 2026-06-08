@@ -4,7 +4,9 @@ from app.core import config
 import pytest
 
 
-def test_load_dotenv_sets_missing_environment_values(monkeypatch, tmp_path: Path) -> None:
+def test_load_dotenv_sets_missing_environment_values(
+    monkeypatch, tmp_path: Path
+) -> None:
     dotenv_path = tmp_path / ".env"
     dotenv_path.write_text(
         "\n".join(
@@ -100,7 +102,10 @@ def test_production_settings_accept_cloud_sql_unix_socket_urls() -> None:
     )
 
     settings.validate_database_configuration()
-    assert settings.cloud_sql_connection_name == "letsgodb:us-central1:free-trial-first-project"
+    assert (
+        settings.cloud_sql_connection_name
+        == "letsgodb:us-central1:free-trial-first-project"
+    )
 
 
 def test_non_production_settings_allow_sqlite_fallback() -> None:

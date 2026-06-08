@@ -99,7 +99,9 @@ def test_delete_image_succeeds() -> None:
 
 
 def test_invalid_credentials_fail_gracefully() -> None:
-    bucket = FakeBucket(name="letsgosa-package-images", exists_error=Forbidden("denied"))
+    bucket = FakeBucket(
+        name="letsgosa-package-images", exists_error=Forbidden("denied")
+    )
     storage = _build_service(bucket)
 
     with pytest.raises(StorageAuthenticationError):
@@ -126,13 +128,18 @@ def test_extract_object_name_supports_public_bucket_urls() -> None:
     bucket = FakeBucket(name="letsgosa-package-images")
     storage = _build_service(bucket)
 
-    assert storage.extract_object_name(
-        "https://storage.googleapis.com/letsgosa-package-images/packages/cape-town-tour/photo.jpg"
-    ) == "packages/cape-town-tour/photo.jpg"
+    assert (
+        storage.extract_object_name(
+            "https://storage.googleapis.com/letsgosa-package-images/packages/cape-town-tour/photo.jpg"
+        )
+        == "packages/cape-town-tour/photo.jpg"
+    )
 
 
 def test_network_errors_are_wrapped_as_storage_errors() -> None:
-    bucket = FakeBucket(name="letsgosa-package-images", exists_error=OSError("connection refused"))
+    bucket = FakeBucket(
+        name="letsgosa-package-images", exists_error=OSError("connection refused")
+    )
     storage = _build_service(bucket)
 
     with pytest.raises(StorageError, match="Storage request failed: OSError."):
@@ -140,7 +147,9 @@ def test_network_errors_are_wrapped_as_storage_errors() -> None:
 
 
 def test_missing_object_delete_is_ignored() -> None:
-    bucket = FakeBucket(name="letsgosa-package-images", blob_delete_error=NotFound("missing"))
+    bucket = FakeBucket(
+        name="letsgosa-package-images", blob_delete_error=NotFound("missing")
+    )
     storage = _build_service(bucket)
 
     storage.delete_image("packages/cape-town-tour/photo.jpg")

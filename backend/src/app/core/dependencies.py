@@ -62,7 +62,9 @@ def get_db_session(request: Request) -> Iterator[Session]:
 
 def get_current_user(
     credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(bearer_scheme)],
-    firebase_auth_service: Annotated[FirebaseAuthService, Depends(get_firebase_auth_service)],
+    firebase_auth_service: Annotated[
+        FirebaseAuthService, Depends(get_firebase_auth_service)
+    ],
 ) -> AuthenticatedUser:
     if credentials is None or credentials.scheme.lower() != "bearer":
         raise HTTPException(

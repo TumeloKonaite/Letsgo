@@ -30,7 +30,9 @@ def create_database_engine(database_url: str) -> Engine:
 
 
 def create_session_factory(engine: Engine) -> sessionmaker[Session]:
-    return sessionmaker(bind=engine, autoflush=False, autocommit=False, expire_on_commit=False)
+    return sessionmaker(
+        bind=engine, autoflush=False, autocommit=False, expire_on_commit=False
+    )
 
 
 def initialize_database(engine: Engine) -> None:
@@ -73,7 +75,9 @@ def _ensure_package_image_storage_key_column(engine: Engine) -> None:
     if "package_images" not in inspector.get_table_names():
         return
 
-    existing_columns = {column["name"] for column in inspector.get_columns("package_images")}
+    existing_columns = {
+        column["name"] for column in inspector.get_columns("package_images")
+    }
     if "storage_key" in existing_columns:
         return
 
@@ -89,8 +93,12 @@ def _migrate_legacy_booking_statuses(engine: Engine) -> None:
         return
 
     with engine.begin() as connection:
-        connection.execute(text("UPDATE bookings SET status = 'new' WHERE status = 'pending'"))
-        connection.execute(text("UPDATE bookings SET status = 'closed' WHERE status = 'rejected'"))
+        connection.execute(
+            text("UPDATE bookings SET status = 'new' WHERE status = 'pending'")
+        )
+        connection.execute(
+            text("UPDATE bookings SET status = 'closed' WHERE status = 'rejected'")
+        )
 
 
 def _migrate_legacy_package_statuses(engine: Engine) -> None:
@@ -99,8 +107,12 @@ def _migrate_legacy_package_statuses(engine: Engine) -> None:
         return
 
     with engine.begin() as connection:
-        connection.execute(text("UPDATE packages SET status = 'draft' WHERE status = 'DRAFT'"))
+        connection.execute(
+            text("UPDATE packages SET status = 'draft' WHERE status = 'DRAFT'")
+        )
         connection.execute(
             text("UPDATE packages SET status = 'published' WHERE status = 'PUBLISHED'")
         )
-        connection.execute(text("UPDATE packages SET status = 'archived' WHERE status = 'ARCHIVED'"))
+        connection.execute(
+            text("UPDATE packages SET status = 'archived' WHERE status = 'ARCHIVED'")
+        )

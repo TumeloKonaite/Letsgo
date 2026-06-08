@@ -13,8 +13,13 @@ class BookingService:
     def __init__(self, repository: BookingRepository) -> None:
         self._repository = repository
 
-    def list_bookings(self, *, status: BookingStatus | None = None) -> list[BookingResponse]:
-        return [self._to_response(booking) for booking in self._repository.list(status=status)]
+    def list_bookings(
+        self, *, status: BookingStatus | None = None
+    ) -> list[BookingResponse]:
+        return [
+            self._to_response(booking)
+            for booking in self._repository.list(status=status)
+        ]
 
     def get_booking(self, booking_id: int) -> BookingResponse:
         booking = self._repository.get_by_id(booking_id)

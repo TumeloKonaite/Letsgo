@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from decimal import Decimal
+from uuid import uuid4
 
 from fastapi.testclient import TestClient
 import pytest
@@ -46,7 +47,8 @@ def _seed_package(session_factory) -> int:
 
 @pytest.fixture
 def admin_packages_client(tmp_path) -> AdminPackagesClient:
-    database_url = f"sqlite:///{tmp_path / 'admin-packages.db'}"
+    database_path = tmp_path / f"admin-packages-{uuid4().hex}.db"
+    database_url = f"sqlite:///{database_path}"
     application = create_application(settings=build_test_settings(database_url))
 
     with TestClient(application) as client:
@@ -85,7 +87,9 @@ def test_create_package_success(admin_packages_client: AdminPackagesClient) -> N
     assert response.json()["slug"] == "garden-route-escape"
 
 
-def test_create_package_duplicate_slug_fails(admin_packages_client: AdminPackagesClient) -> None:
+def test_create_package_duplicate_slug_fails(
+    admin_packages_client: AdminPackagesClient,
+) -> None:
     response = admin_packages_client.client.post(
         "/api/admin/packages",
         headers=_admin_headers(),
@@ -149,7 +153,9 @@ def test_update_package_success(admin_packages_client: AdminPackagesClient) -> N
     assert response.json()["price_from"] == "4999.00"
 
 
-def test_update_missing_package_fails(admin_packages_client: AdminPackagesClient) -> None:
+def test_update_missing_package_fails(
+    admin_packages_client: AdminPackagesClient,
+) -> None:
     response = admin_packages_client.client.patch(
         "/api/admin/packages/999999",
         headers=_admin_headers(),
@@ -196,7 +202,9 @@ def test_delete_package_success(admin_packages_client: AdminPackagesClient) -> N
     assert response.status_code == 204
 
 
-def test_delete_missing_package_fails(admin_packages_client: AdminPackagesClient) -> None:
+def test_delete_missing_package_fails(
+    admin_packages_client: AdminPackagesClient,
+) -> None:
     response = admin_packages_client.client.delete(
         "/api/admin/packages/999999",
         headers=_admin_headers(),
@@ -206,7 +214,9 @@ def test_delete_missing_package_fails(admin_packages_client: AdminPackagesClient
     assert response.json() == {"detail": "Package not found"}
 
 
-def test_admin_endpoints_require_authentication(admin_packages_client: AdminPackagesClient) -> None:
+def test_admin_endpoints_require_authentication(
+    admin_packages_client: AdminPackagesClient,
+) -> None:
     response = admin_packages_client.client.post(
         "/api/admin/packages",
         json={
@@ -231,7 +241,9 @@ def test_admin_endpoints_require_authentication(admin_packages_client: AdminPack
     assert response.json() == {"detail": "Missing bearer token"}
 
 
-def test_admin_endpoints_require_admin_claim(admin_packages_client: AdminPackagesClient) -> None:
+def test_admin_endpoints_require_admin_claim(
+    admin_packages_client: AdminPackagesClient,
+) -> None:
     response = admin_packages_client.client.patch(
         f"/api/admin/packages/{admin_packages_client.package_id}/publish",
         headers=bearer_headers(TEST_EDITOR_TOKEN),
