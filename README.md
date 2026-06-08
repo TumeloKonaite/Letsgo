@@ -94,7 +94,7 @@ The frontend reads `VITE_API_BASE_URL` for production and still accepts `VITE_LE
 VITE_API_BASE_URL=https://your-cloud-run-url
 ```
 
-For production builds in this repo, [frontend/.env.production](/c:/Users/l/Documents/letsgosa/frontend/.env.production) points at the Cloud Run backend URL for PR 20. Firebase Hosting config lives in [frontend/firebase.json](/c:/Users/l/Documents/letsgosa/frontend/firebase.json) and [frontend/.firebaserc](/c:/Users/l/Documents/letsgosa/frontend/.firebaserc).
+GitHub Actions injects `VITE_API_BASE_URL` from the repository secret `VITE_API_BASE_URL` during Firebase Hosting deployments. Firebase Hosting config lives in [frontend/firebase.json](/c:/Users/l/Documents/letsgosa/frontend/firebase.json) and [frontend/.firebaserc](/c:/Users/l/Documents/letsgosa/frontend/.firebaserc).
 
 ## Frontend hosting
 
@@ -104,6 +104,11 @@ Build and deploy the frontend from the `frontend` directory:
 npm run build
 npx firebase-tools deploy --only hosting --project letsgodb --config firebase.json
 ```
+
+GitHub Actions workflow [deploy-frontend.yml](/c:/Users/l/Documents/letsgosa/.github/workflows/deploy-frontend.yml) builds the frontend before deploying it to Firebase Hosting. Configure these repository secrets before relying on CI/CD:
+
+- `FIREBASE_SERVICE_ACCOUNT_LETSGODB`
+- `VITE_API_BASE_URL`
 
 ## Notes
 
