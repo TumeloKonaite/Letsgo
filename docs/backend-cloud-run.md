@@ -7,7 +7,7 @@ This document covers the backend production deploy path for:
 - service `letsgosa-backend`
 - Artifact Registry repository `letsgosa`
 
-The repo now deploys the backend through GitHub Actions in [.github/workflows/deploy-backend.yml](/c:/Users/l/Documents/letsgosa/.github/workflows/deploy-backend.yml). The workflow authenticates with Workload Identity Federation, builds the repo-root [Dockerfile](/c:/Users/l/Documents/letsgosa/Dockerfile), pushes the image to Artifact Registry, deploys that image to Cloud Run, and verifies `GET /health`.
+The repo now deploys the backend through GitHub Actions in [.github/workflows/deploy-backend.yml](/c:/Users/l/Documents/letsgosa/.github/workflows/deploy-backend.yml). The workflow authenticates with Workload Identity Federation, reads the production database URL from Secret Manager, runs `alembic upgrade head`, builds the repo-root [Dockerfile](/c:/Users/l/Documents/letsgosa/Dockerfile), pushes the image to Artifact Registry, deploys that image to Cloud Run, and verifies `GET /health`.
 
 ## GitHub configuration
 
@@ -127,6 +127,8 @@ Grant the GitHub deployment service account at least:
 - `roles/artifactregistry.writer`
 - `roles/iam.serviceAccountUser` on the Cloud Run runtime service account
 - `roles/cloudbuild.builds.editor`
+- `roles/cloudsql.client`
+- `roles/secretmanager.secretAccessor` for `letsgosa-database-url`
 
 Grant GitHub access to impersonate that service account:
 
@@ -168,10 +170,12 @@ Grant the Cloud Run runtime service account at least:
 On every push to `main`, the deploy workflow:
 
 1. Authenticates to Google Cloud with Workload Identity Federation.
-2. Builds the backend image from the repo-root Dockerfile.
-3. Pushes two tags to Artifact Registry: `${GITHUB_SHA}` and `latest`.
-4. Deploys the `${GITHUB_SHA}` image to Cloud Run.
-5. Reads the service URL from Cloud Run and retries `GET /health` until it passes or times out.
+2. Reads the latest `letsgosa-database-url` value from Secret Manager.
+3. Runs `alembic upgrade head` against the production database. If the URL uses the Cloud Run Unix socket form, the workflow starts a Cloud SQL Auth Proxy and rewrites the URL to `127.0.0.1:5432` for the migration step.
+4. Builds the backend image from the repo-root Dockerfile.
+5. Pushes two tags to Artifact Registry: `${GITHUB_SHA}` and `latest`.
+6. Deploys the `${GITHUB_SHA}` image to Cloud Run.
+7. Reads the service URL from Cloud Run and retries `GET /health` until it passes or times out.
 
 Because the workflow updates only the image, existing Cloud Run environment variables, secrets, traffic settings, and previous revisions remain in place for rollback.
 
@@ -199,4 +203,4 @@ Verify public package routes:
 Invoke-WebRequest "$serviceUrl/api/packages"
 ```
 
-If the database schema is behind, run `alembic upgrade head` against the production database before deploying or shifting traffic.
+If you need to apply schema changes outside GitHub Actions, run `alembic upgrade head` against the production database before deploying or shifting traffic.

@@ -21,6 +21,7 @@ env:
   ARTIFACT_REGISTRY_REPOSITORY: ${{ vars.ARTIFACT_REGISTRY_REPOSITORY }}
   IMAGE_REGISTRY_HOST: ${{ vars.GCP_REGION }}-docker.pkg.dev
   BACKEND_IMAGE_NAME: backend
+  DATABASE_URL_SECRET_NAME: letsgosa-database-url
 
 jobs:
   deploy:
@@ -45,6 +46,12 @@ jobs:
         with:
           project_id: ${{ env.GCP_PROJECT_ID }}
 
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version-file: .python-version
+          cache: pip
+
       - name: Validate deployment configuration
         shell: bash
         env:
@@ -64,6 +71,88 @@ jobs:
             printf 'Missing required GitHub variables or secrets: %s\n' "${missing[*]}" >&2
             exit 1
           fi
+
+      - name: Install backend dependencies for migrations
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r backend/requirements.txt
+
+      - name: Read production database URL from Secret Manager
+        id: database_url
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          database_url="$(
+            gcloud secrets versions access latest \
+              --secret "${DATABASE_URL_SECRET_NAME}" \
+              --project "${GCP_PROJECT_ID}"
+          )"
+
+          if [[ -z "${database_url}" ]]; then
+            echo "Production database URL secret is empty" >&2
+            exit 1
+          fi
+
+          echo "::add-mask::${database_url}"
+          {
+            echo "database_url<<EOF"
+            echo "${database_url}"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Run Alembic migrations
+        shell: bash
+        env:
+          PYTHONPATH: backend/src
+          RAW_DATABASE_URL: ${{ steps.database_url.outputs.database_url }}
+        run: |
+          set -euo pipefail
+
+          proxy_pid=""
+          cleanup() {
+            if [[ -n "${proxy_pid}" ]]; then
+              kill "${proxy_pid}" || true
+              wait "${proxy_pid}" || true
+            fi
+          }
+          trap cleanup EXIT
+
+          export LETSGOSA_ENV=production
+          export LETSGOSA_DATABASE_URL="${RAW_DATABASE_URL}"
+
+          if [[ "${RAW_DATABASE_URL}" == *"host=/cloudsql/"* ]]; then
+            instance_connection_name="$(
+              python -c "from urllib.parse import parse_qs, urlparse; import os; host = parse_qs(urlparse(os.environ['RAW_DATABASE_URL']).query).get('host', [''])[0]; prefix = '/cloudsql/'; assert host.startswith(prefix) and len(host) > len(prefix), 'Cloud SQL instance connection name missing from LETSGOSA_DATABASE_URL'; print(host[len(prefix):])"
+            )"
+
+            curl --fail --silent --show-error --location \
+              -o cloud-sql-proxy \
+              https://storage.googleapis.com/cloud-sql-connectors/cloud-sql-proxy/v2.22.0/cloud-sql-proxy.linux.amd64
+            chmod +x cloud-sql-proxy
+            ./cloud-sql-proxy --quiet --address 127.0.0.1 --port 5432 "${instance_connection_name}" &
+            proxy_pid=$!
+
+            for attempt in {1..30}; do
+              if (echo > /dev/tcp/127.0.0.1/5432) >/dev/null 2>&1; then
+                break
+              fi
+
+              if [[ "${attempt}" -eq 30 ]]; then
+                echo "Cloud SQL Auth Proxy did not become ready on 127.0.0.1:5432" >&2
+                exit 1
+              fi
+
+              sleep 1
+            done
+
+            export LETSGOSA_DATABASE_URL="$(
+              python -c "from urllib.parse import parse_qsl, urlencode, urlparse, urlunparse; import os; raw = os.environ['RAW_DATABASE_URL']; parts = urlparse(raw); query = dict((key, value) for key, value in parse_qsl(parts.query, keep_blank_values=True) if key != 'host'); query['sslmode'] = 'disable'; netloc = f'{parts.netloc}127.0.0.1:5432' if parts.netloc else '127.0.0.1:5432'; print(urlunparse((parts.scheme, netloc, parts.path, parts.params, urlencode(query), parts.fragment)))"
+            )"
+            echo "::add-mask::${LETSGOSA_DATABASE_URL}"
+          fi
+
+          alembic upgrade head
 
       - name: Configure Docker for Artifact Registry
         run: gcloud auth configure-docker "${IMAGE_REGISTRY_HOST}" --quiet
