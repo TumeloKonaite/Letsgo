@@ -27,7 +27,9 @@ class PostgresBookingRepository:
                 return None
             return self._to_record(booking)
 
-    def update_status(self, booking_id: int, status: BookingStatus) -> BookingRecord | None:
+    def update_status(
+        self, booking_id: int, status: BookingStatus
+    ) -> BookingRecord | None:
         with self._session_factory() as session:
             booking = session.get(Booking, booking_id)
             if booking is None:

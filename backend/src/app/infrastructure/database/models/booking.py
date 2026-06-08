@@ -53,11 +53,11 @@ class Booking(TimestampMixin, Base):
     )
 
     package: Mapped[Package] = relationship(back_populates="bookings")
-    availability: Mapped[PackageAvailability | None] = relationship(back_populates="bookings")
-
-    __table_args__ = (
-        Index("ix_bookings_package_id_status", "package_id", "status"),
+    availability: Mapped[PackageAvailability | None] = relationship(
+        back_populates="bookings"
     )
+
+    __table_args__ = (Index("ix_bookings_package_id_status", "package_id", "status"),)
 
 
 from app.infrastructure.database.models.package import Package, PackageAvailability

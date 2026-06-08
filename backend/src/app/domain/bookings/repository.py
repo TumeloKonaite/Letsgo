@@ -30,7 +30,9 @@ class BookingRepository(Protocol):
     def get_by_id(self, booking_id: int) -> BookingRecord | None:
         """Return one booking by id."""
 
-    def update_status(self, booking_id: int, status: BookingStatus) -> BookingRecord | None:
+    def update_status(
+        self, booking_id: int, status: BookingStatus
+    ) -> BookingRecord | None:
         """Update a booking status."""
 
     def delete(self, booking_id: int) -> bool:

@@ -12,7 +12,9 @@ def test_settings_support_environment_alias(monkeypatch) -> None:
     assert settings.is_production is True
 
 
-def test_letsgosa_environment_takes_precedence_over_environment_alias(monkeypatch) -> None:
+def test_letsgosa_environment_takes_precedence_over_environment_alias(
+    monkeypatch,
+) -> None:
     monkeypatch.setattr("app.core.config._load_dotenv", lambda: None)
     monkeypatch.setenv("LETSGOSA_ENV", "development")
     monkeypatch.setenv("ENVIRONMENT", "production")

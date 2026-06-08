@@ -41,7 +41,10 @@ class PackageService:
         self._storage_service = storage_service
 
     def list_packages(self) -> list[PackageResponse]:
-        return [self._to_package_response(package) for package in self._repository.list_all_packages()]
+        return [
+            self._to_package_response(package)
+            for package in self._repository.list_all_packages()
+        ]
 
     def get_package(self, package_id: int) -> PackageResponse:
         package = self._repository.get_by_id(package_id)
@@ -50,7 +53,10 @@ class PackageService:
         return self._to_package_response(package)
 
     def list_published_packages(self) -> list[PackageListItem]:
-        return [self._to_list_item(package) for package in self._repository.list_published_packages()]
+        return [
+            self._to_list_item(package)
+            for package in self._repository.list_published_packages()
+        ]
 
     def get_published_package_by_slug(self, slug: str) -> PackageDetail:
         package = self._repository.get_published_package_by_slug(slug)
@@ -63,7 +69,9 @@ class PackageService:
         package = self._repository.create(self._to_create_data(package_data))
         return self._to_package_response(package)
 
-    def update_package(self, package_id: int, package_data: PackageUpdate) -> PackageResponse:
+    def update_package(
+        self, package_id: int, package_data: PackageUpdate
+    ) -> PackageResponse:
         package = self._repository.get_by_id(package_id)
         if package is None:
             raise PackageNotFoundError(package_id)
@@ -98,7 +106,9 @@ class PackageService:
         if not deleted:
             raise PackageNotFoundError(package_id)
 
-    def _ensure_slug_is_unique(self, slug: str, exclude_package_id: int | None = None) -> None:
+    def _ensure_slug_is_unique(
+        self, slug: str, exclude_package_id: int | None = None
+    ) -> None:
         existing_package = self._repository.get_by_slug(slug)
         if existing_package is None:
             return
@@ -174,7 +184,9 @@ class PackageService:
             is_featured=package.is_featured,
             images=[self._to_image(image) for image in package.images],
             itinerary=[self._to_itinerary_item(item) for item in package.itinerary],
-            availability=[self._to_availability_item(item) for item in package.availability],
+            availability=[
+                self._to_availability_item(item) for item in package.availability
+            ],
         )
 
     def _to_image(self, image: PackageImageRecord) -> PackageImage:

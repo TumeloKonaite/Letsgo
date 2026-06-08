@@ -2,7 +2,17 @@ from __future__ import annotations
 
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, Response, UploadFile, status
+from fastapi import (
+    APIRouter,
+    Depends,
+    File,
+    Form,
+    HTTPException,
+    Request,
+    Response,
+    UploadFile,
+    status,
+)
 from sqlalchemy.orm import Session, sessionmaker
 
 from app.api.schemas.packages import AdminPackageImageResponse
@@ -47,9 +57,17 @@ def _next_display_order(package: Package) -> int:
     return max(image.sort_order for image in package.images) + 1
 
 
-def _to_response(image: PackageImage, storage_service: StorageService) -> AdminPackageImageResponse:
-    object_name = image.storage_key or storage_service.extract_object_name(image.image_url)
-    url = image.image_url if object_name is None else storage_service.get_public_url(object_name)
+def _to_response(
+    image: PackageImage, storage_service: StorageService
+) -> AdminPackageImageResponse:
+    object_name = image.storage_key or storage_service.extract_object_name(
+        image.image_url
+    )
+    url = (
+        image.image_url
+        if object_name is None
+        else storage_service.get_public_url(object_name)
+    )
     return AdminPackageImageResponse(
         id=image.id,
         package_id=image.package_id,
@@ -100,7 +118,9 @@ async def upload_package_image(
 
     content = await file.read()
     try:
-        content_type = validate_image_upload(content, settings.package_image_max_upload_bytes)
+        content_type = validate_image_upload(
+            content, settings.package_image_max_upload_bytes
+        )
     except (InvalidImageFormatError, ImageTooLargeError) as exc:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -118,7 +138,9 @@ async def upload_package_image(
         )
 
         try:
-            stored_object = storage_service.upload_image(object_name, content, content_type)
+            stored_object = storage_service.upload_image(
+                object_name, content, content_type
+            )
         except StorageError as exc:
             _raise_for_storage_error(exc)
 
@@ -127,7 +149,9 @@ async def upload_package_image(
             storage_key=stored_object.object_name,
             image_url=stored_object.url,
             alt_text=alt_text,
-            sort_order=display_order if display_order is not None else _next_display_order(package),
+            sort_order=display_order
+            if display_order is not None
+            else _next_display_order(package),
             is_cover=is_cover,
         )
         if image.is_cover:
@@ -175,14 +199,19 @@ def delete_package_image(
 ) -> Response:
     with session_factory() as session:
         package = _get_package_or_404(session, package_id)
-        image = next((candidate for candidate in package.images if candidate.id == image_id), None)
+        image = next(
+            (candidate for candidate in package.images if candidate.id == image_id),
+            None,
+        )
         if image is None:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Package image not found",
             )
 
-        object_name = image.storage_key or storage_service.extract_object_name(image.image_url)
+        object_name = image.storage_key or storage_service.extract_object_name(
+            image.image_url
+        )
         if object_name is not None:
             try:
                 storage_service.delete_image(object_name)

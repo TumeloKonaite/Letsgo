@@ -69,7 +69,9 @@ class PostgresPackageRepository:
                 return None
             return self._to_package_record(package)
 
-    def update(self, package_id: int, package_data: Mapping[str, object]) -> PackageRecord | None:
+    def update(
+        self, package_id: int, package_data: Mapping[str, object]
+    ) -> PackageRecord | None:
         with self._session_factory() as session:
             package = session.get(Package, package_id)
             if package is None:
@@ -191,8 +193,12 @@ class PostgresPackageRepository:
             currency=package.currency,
             is_featured=package.is_featured,
             images=tuple(self._to_image(image) for image in package.images),
-            itinerary=tuple(self._to_itinerary_item(item) for item in package.itinerary_items),
-            availability=tuple(self._to_availability_item(item) for item in package.availability_dates),
+            itinerary=tuple(
+                self._to_itinerary_item(item) for item in package.itinerary_items
+            ),
+            availability=tuple(
+                self._to_availability_item(item) for item in package.availability_dates
+            ),
         )
 
     def _to_image(self, image) -> PackageImageRecord:

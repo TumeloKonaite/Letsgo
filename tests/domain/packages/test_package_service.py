@@ -19,7 +19,9 @@ from app.domain.packages.service import (
 )
 from app.domain.packages.storage import StorageError
 from app.infrastructure.database.models import PackagePublicationStatus
-from app.infrastructure.packages.in_memory_package_repository import InMemoryPackageRepository
+from app.infrastructure.packages.in_memory_package_repository import (
+    InMemoryPackageRepository,
+)
 
 
 def _build_service() -> PackageService:
@@ -245,7 +247,9 @@ def test_public_package_urls_are_normalized_for_storage_images() -> None:
             availability=(),
         ),
     )
-    service = PackageService(repository=repository, storage_service=FakeStorageService())
+    service = PackageService(
+        repository=repository, storage_service=FakeStorageService()
+    )
 
     list_payload = service.list_published_packages()
     detail_payload = service.get_published_package_by_slug("existing-package")
@@ -261,7 +265,9 @@ def test_public_package_urls_are_normalized_for_storage_images() -> None:
     )
 
 
-def test_public_package_urls_fall_back_to_stored_url_when_storage_is_unavailable() -> None:
+def test_public_package_urls_fall_back_to_stored_url_when_storage_is_unavailable() -> (
+    None
+):
     storage_image = PackageImageRecord(
         id=10,
         image_url="https://storage.googleapis.com/letsgosa-package-images/packages/cape-town/hero.jpg",
@@ -298,7 +304,9 @@ def test_public_package_urls_fall_back_to_stored_url_when_storage_is_unavailable
             availability=(),
         ),
     )
-    service = PackageService(repository=repository, storage_service=FailingStorageService())
+    service = PackageService(
+        repository=repository, storage_service=FailingStorageService()
+    )
 
     list_payload = service.list_published_packages()
     detail_payload = service.get_published_package_by_slug("existing-package")

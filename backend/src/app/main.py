@@ -18,7 +18,9 @@ from app.infrastructure.database.session import (
     create_session_factory,
     initialize_database,
 )
-from app.infrastructure.packages.postgres_package_repository import PostgresPackageRepository
+from app.infrastructure.packages.postgres_package_repository import (
+    PostgresPackageRepository,
+)
 from app.infrastructure.storage import create_storage_service
 
 

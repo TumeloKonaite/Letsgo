@@ -2,7 +2,10 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-from app.auth.firebase_auth import FirebaseTokenExpiredError, FirebaseTokenValidationError
+from app.auth.firebase_auth import (
+    FirebaseTokenExpiredError,
+    FirebaseTokenValidationError,
+)
 from app.core.config import Settings
 from app.domain.auth.models import AuthenticatedUser
 

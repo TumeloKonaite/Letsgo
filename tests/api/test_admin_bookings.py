@@ -95,7 +95,9 @@ def test_missing_token_returns_401(admin_bookings_client: AdminBookingsClient) -
     assert response.json() == {"detail": "Missing bearer token"}
 
 
-def test_non_admin_token_returns_403(admin_bookings_client: AdminBookingsClient) -> None:
+def test_non_admin_token_returns_403(
+    admin_bookings_client: AdminBookingsClient,
+) -> None:
     response = admin_bookings_client.client.get(
         "/api/admin/bookings",
         headers=bearer_headers(TEST_EDITOR_TOKEN),
@@ -116,7 +118,9 @@ def test_admin_can_list_bookings(admin_bookings_client: AdminBookingsClient) -> 
     assert {item["status"] for item in response.json()} == {"new", "contacted"}
 
 
-def test_admin_can_filter_bookings_by_status(admin_bookings_client: AdminBookingsClient) -> None:
+def test_admin_can_filter_bookings_by_status(
+    admin_bookings_client: AdminBookingsClient,
+) -> None:
     response = admin_bookings_client.client.get(
         "/api/admin/bookings",
         headers=_admin_headers(),
@@ -142,7 +146,9 @@ def test_admin_can_filter_bookings_by_status(admin_bookings_client: AdminBooking
     ]
 
 
-def test_admin_can_view_booking_detail(admin_bookings_client: AdminBookingsClient) -> None:
+def test_admin_can_view_booking_detail(
+    admin_bookings_client: AdminBookingsClient,
+) -> None:
     response = admin_bookings_client.client.get(
         f"/api/admin/bookings/{admin_bookings_client.booking_id}",
         headers=_admin_headers(),
@@ -153,7 +159,9 @@ def test_admin_can_view_booking_detail(admin_bookings_client: AdminBookingsClien
     assert response.json()["customer_email"] == "alex.new@example.com"
 
 
-def test_admin_can_update_booking_status(admin_bookings_client: AdminBookingsClient) -> None:
+def test_admin_can_update_booking_status(
+    admin_bookings_client: AdminBookingsClient,
+) -> None:
     response = admin_bookings_client.client.patch(
         f"/api/admin/bookings/{admin_bookings_client.booking_id}/status",
         headers=_admin_headers(),
@@ -164,7 +172,9 @@ def test_admin_can_update_booking_status(admin_bookings_client: AdminBookingsCli
     assert response.json()["status"] == "confirmed"
 
 
-def test_invalid_status_returns_validation_error(admin_bookings_client: AdminBookingsClient) -> None:
+def test_invalid_status_returns_validation_error(
+    admin_bookings_client: AdminBookingsClient,
+) -> None:
     response = admin_bookings_client.client.patch(
         f"/api/admin/bookings/{admin_bookings_client.booking_id}/status",
         headers=_admin_headers(),

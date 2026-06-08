@@ -30,7 +30,9 @@ class GcsStorageService(StorageService):
         self._public_base_url = public_base_url.rstrip("/")
         self._client = client or Client(project=self._project_id)
 
-    def upload_image(self, object_name: str, content: bytes, content_type: str) -> StoredObject:
+    def upload_image(
+        self, object_name: str, content: bytes, content_type: str
+    ) -> StoredObject:
         bucket = self._ensure_bucket_exists()
         blob = bucket.blob(object_name)
         try:
@@ -40,13 +42,17 @@ class GcsStorageService(StorageService):
                 content_type=content_type,
             )
         except (Forbidden, Unauthorized) as exc:
-            raise StorageAuthenticationError("Storage credentials were rejected.") from exc
+            raise StorageAuthenticationError(
+                "Storage credentials were rejected."
+            ) from exc
         except NotFound as exc:
             raise StorageBucketNotFoundError(
                 f"Storage bucket '{self._bucket_name}' was not found."
             ) from exc
         except (GoogleAPIError, OSError) as exc:
-            raise StorageError(f"Storage request failed: {type(exc).__name__}.") from exc
+            raise StorageError(
+                f"Storage request failed: {type(exc).__name__}."
+            ) from exc
 
         return StoredObject(
             object_name=object_name,
@@ -63,9 +69,13 @@ class GcsStorageService(StorageService):
         except NotFound:
             return
         except (Forbidden, Unauthorized) as exc:
-            raise StorageAuthenticationError("Storage credentials were rejected.") from exc
+            raise StorageAuthenticationError(
+                "Storage credentials were rejected."
+            ) from exc
         except (GoogleAPIError, OSError) as exc:
-            raise StorageError(f"Storage request failed: {type(exc).__name__}.") from exc
+            raise StorageError(
+                f"Storage request failed: {type(exc).__name__}."
+            ) from exc
 
     def get_public_url(self, object_name: str) -> str:
         return f"{self._public_base_url}/{quote(object_name, safe='/~')}"
@@ -95,13 +105,17 @@ class GcsStorageService(StorageService):
                     f"Storage bucket '{self._bucket_name}' was not found."
                 )
         except (Forbidden, Unauthorized) as exc:
-            raise StorageAuthenticationError("Storage credentials were rejected.") from exc
+            raise StorageAuthenticationError(
+                "Storage credentials were rejected."
+            ) from exc
         except NotFound as exc:
             raise StorageBucketNotFoundError(
                 f"Storage bucket '{self._bucket_name}' was not found."
             ) from exc
         except (GoogleAPIError, OSError) as exc:
-            raise StorageError(f"Storage request failed: {type(exc).__name__}.") from exc
+            raise StorageError(
+                f"Storage request failed: {type(exc).__name__}."
+            ) from exc
         return bucket
 
 

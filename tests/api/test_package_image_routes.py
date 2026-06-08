@@ -23,7 +23,9 @@ class FakeStorageService:
     uploads: dict[str, bytes] = field(default_factory=dict)
     deleted: list[str] = field(default_factory=list)
 
-    def upload_image(self, object_name: str, content: bytes, content_type: str) -> StoredObject:
+    def upload_image(
+        self, object_name: str, content: bytes, content_type: str
+    ) -> StoredObject:
         self.uploads[object_name] = content
         return StoredObject(
             object_name=object_name,
@@ -104,12 +106,18 @@ def _jpeg_bytes() -> bytes:
     return b"\xff\xd8\xff\xe0" + b"jpeg-data"
 
 
-def test_authenticated_admin_can_upload_images(package_images_client: PackageImagesClient) -> None:
+def test_authenticated_admin_can_upload_images(
+    package_images_client: PackageImagesClient,
+) -> None:
     response = package_images_client.client.post(
         f"/api/admin/packages/{package_images_client.package_id}/images",
         headers=_admin_headers(),
         files={"file": ("cape-town.jpg", _jpeg_bytes(), "image/jpeg")},
-        data={"alt_text": "Table Mountain view", "display_order": "1", "is_cover": "true"},
+        data={
+            "alt_text": "Table Mountain view",
+            "display_order": "1",
+            "is_cover": "true",
+        },
     )
 
     assert response.status_code == 201
@@ -125,7 +133,9 @@ def test_authenticated_admin_can_upload_images(package_images_client: PackageIma
     assert len(package_images_client.storage.uploads) == 1
 
 
-def test_non_admin_users_receive_403(package_images_client: PackageImagesClient) -> None:
+def test_non_admin_users_receive_403(
+    package_images_client: PackageImagesClient,
+) -> None:
     response = package_images_client.client.post(
         f"/api/admin/packages/{package_images_client.package_id}/images",
         headers=bearer_headers(TEST_EDITOR_TOKEN),
@@ -136,7 +146,9 @@ def test_non_admin_users_receive_403(package_images_client: PackageImagesClient)
     assert response.json() == {"detail": "Admin claim required"}
 
 
-def test_unsupported_file_types_receive_400(package_images_client: PackageImagesClient) -> None:
+def test_unsupported_file_types_receive_400(
+    package_images_client: PackageImagesClient,
+) -> None:
     response = package_images_client.client.post(
         f"/api/admin/packages/{package_images_client.package_id}/images",
         headers=_admin_headers(),
@@ -149,15 +161,21 @@ def test_unsupported_file_types_receive_400(package_images_client: PackageImages
     }
 
 
-def test_oversized_files_receive_400(package_images_client: PackageImagesClient) -> None:
+def test_oversized_files_receive_400(
+    package_images_client: PackageImagesClient,
+) -> None:
     response = package_images_client.client.post(
         f"/api/admin/packages/{package_images_client.package_id}/images",
         headers=_admin_headers(),
-        files={"file": ("cape-town.png", b"\x89PNG\r\n\x1a\n" + (b"x" * 256), "image/png")},
+        files={
+            "file": ("cape-town.png", b"\x89PNG\r\n\x1a\n" + (b"x" * 256), "image/png")
+        },
     )
 
     assert response.status_code == 400
-    assert response.json() == {"detail": "Image exceeds maximum upload size of 128 bytes."}
+    assert response.json() == {
+        "detail": "Image exceeds maximum upload size of 128 bytes."
+    }
 
 
 def test_uploaded_image_metadata_is_persisted_and_listed(
@@ -166,7 +184,9 @@ def test_uploaded_image_metadata_is_persisted_and_listed(
     upload_response = package_images_client.client.post(
         f"/api/admin/packages/{package_images_client.package_id}/images",
         headers=_admin_headers(),
-        files={"file": ("cape-town.webp", b"RIFF\x00\x00\x00\x00WEBPpayload", "image/webp")},
+        files={
+            "file": ("cape-town.webp", b"RIFF\x00\x00\x00\x00WEBPpayload", "image/webp")
+        },
         data={"alt_text": "Coastline", "display_order": "3"},
     )
     assert upload_response.status_code == 201

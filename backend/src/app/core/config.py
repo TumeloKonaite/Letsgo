@@ -118,16 +118,16 @@ class Settings:
             api_version=os.getenv("LETSGOSA_API_VERSION", DEFAULT_API_VERSION),
             host=os.getenv("LETSGOSA_HOST", DEFAULT_HOST),
             port=int(
-                os.getenv("LETSGOSA_PORT")
-                or os.getenv("PORT")
-                or str(DEFAULT_PORT)
+                os.getenv("LETSGOSA_PORT") or os.getenv("PORT") or str(DEFAULT_PORT)
             ),
             database_url=os.getenv("LETSGOSA_DATABASE_URL", DEFAULT_DATABASE_URL),
             gcp_project_id=resolved_project_id,
             google_cloud_project=resolved_project_id,
             cloud_sql_connection_name=os.getenv("CLOUD_SQL_CONNECTION_NAME"),
             firebase_project_id=os.getenv("FIREBASE_PROJECT_ID") or resolved_project_id,
-            firebase_admin_role=os.getenv("FIREBASE_ADMIN_ROLE", DEFAULT_FIREBASE_ADMIN_ROLE),
+            firebase_admin_role=os.getenv(
+                "FIREBASE_ADMIN_ROLE", DEFAULT_FIREBASE_ADMIN_ROLE
+            ),
             storage_provider=os.getenv("STORAGE_PROVIDER", DEFAULT_STORAGE_PROVIDER),
             gcs_bucket_name=os.getenv("GCS_BUCKET_NAME"),
             gcs_public_base_url=os.getenv("GCS_PUBLIC_BASE_URL"),

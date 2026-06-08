@@ -17,7 +17,11 @@ from app.infrastructure.database.models import (
     PackageItineraryItem,
     PackagePublicationStatus,
 )
-from app.infrastructure.database.session import REQUIRED_TABLES, create_database_engine, initialize_database
+from app.infrastructure.database.session import (
+    REQUIRED_TABLES,
+    create_database_engine,
+    initialize_database,
+)
 
 
 def test_models_are_importable_and_registered() -> None:
@@ -45,7 +49,9 @@ def test_package_relationships_are_wired_correctly() -> None:
         price_from=Decimal("4999.00"),
         currency="ZAR",
     )
-    image = PackageImage(image_url="https://example.com/cover.jpg", alt_text="Table Mountain")
+    image = PackageImage(
+        image_url="https://example.com/cover.jpg", alt_text="Table Mountain"
+    )
     itinerary = PackageItineraryItem(
         day_number=1,
         sort_order=0,
@@ -165,20 +171,27 @@ def test_create_database_engine_supports_cloud_sql_unix_socket_urls() -> None:
     try:
         assert engine.dialect.name == "postgresql"
         assert engine.url.drivername == "postgresql+psycopg"
-        assert engine.url.query["host"] == "/cloudsql/letsgodb:us-central1:free-trial-first-project"
+        assert (
+            engine.url.query["host"]
+            == "/cloudsql/letsgodb:us-central1:free-trial-first-project"
+        )
     finally:
         engine.dispose()
 
 
 def test_package_publication_status_persists_lowercase_values_for_postgresql() -> None:
-    bind_processor = Package.__table__.c.status.type.bind_processor(postgresql.dialect())
+    bind_processor = Package.__table__.c.status.type.bind_processor(
+        postgresql.dialect()
+    )
 
     assert bind_processor is not None
     assert bind_processor(PackagePublicationStatus.DRAFT) == "draft"
 
 
 def test_booking_status_persists_lowercase_values_for_postgresql() -> None:
-    bind_processor = Booking.__table__.c.status.type.bind_processor(postgresql.dialect())
+    bind_processor = Booking.__table__.c.status.type.bind_processor(
+        postgresql.dialect()
+    )
 
     assert bind_processor is not None
     assert bind_processor(BookingStatus.NEW) == "new"
@@ -196,7 +209,9 @@ def test_initialize_database_creates_expected_tables_for_sqlite(tmp_path) -> Non
         engine.dispose()
 
 
-def test_initialize_database_adds_storage_key_column_for_existing_tables(tmp_path) -> None:
+def test_initialize_database_adds_storage_key_column_for_existing_tables(
+    tmp_path,
+) -> None:
     engine = create_engine(f"sqlite:///{tmp_path / 'legacy.db'}")
 
     with engine.begin() as connection:
@@ -275,9 +290,11 @@ def test_initialize_database_migrates_legacy_booking_status_values(tmp_path) -> 
         initialize_database(engine)
 
         with engine.connect() as connection:
-            rows = connection.execute(
-                text("SELECT status FROM bookings ORDER BY id ASC")
-            ).scalars().all()
+            rows = (
+                connection.execute(text("SELECT status FROM bookings ORDER BY id ASC"))
+                .scalars()
+                .all()
+            )
 
         assert rows == ["new", "closed"]
     finally:
@@ -343,9 +360,11 @@ def test_initialize_database_migrates_legacy_package_status_values(tmp_path) -> 
         initialize_database(engine)
 
         with engine.connect() as connection:
-            rows = connection.execute(
-                text("SELECT status FROM packages ORDER BY id ASC")
-            ).scalars().all()
+            rows = (
+                connection.execute(text("SELECT status FROM packages ORDER BY id ASC"))
+                .scalars()
+                .all()
+            )
 
         assert rows == ["draft", "published", "archived"]
     finally:

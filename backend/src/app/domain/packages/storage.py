@@ -52,7 +52,9 @@ class StoredObject:
 
 
 class StorageService(Protocol):
-    def upload_image(self, object_name: str, content: bytes, content_type: str) -> StoredObject:
+    def upload_image(
+        self, object_name: str, content: bytes, content_type: str
+    ) -> StoredObject:
         """Upload an image and return its stored metadata."""
 
     def delete_image(self, object_name: str) -> None:
@@ -67,11 +69,15 @@ class StorageService(Protocol):
 
 def validate_image_upload(content: bytes, max_size_bytes: int) -> str:
     if len(content) > max_size_bytes:
-        raise ImageTooLargeError(f"Image exceeds maximum upload size of {max_size_bytes} bytes.")
+        raise ImageTooLargeError(
+            f"Image exceeds maximum upload size of {max_size_bytes} bytes."
+        )
 
     detected_content_type = detect_image_content_type(content)
     if detected_content_type is None:
-        raise InvalidImageFormatError("Unsupported image format. Supported formats: JPEG, PNG, WebP.")
+        raise InvalidImageFormatError(
+            "Unsupported image format. Supported formats: JPEG, PNG, WebP."
+        )
 
     return detected_content_type
 
@@ -86,12 +92,18 @@ def detect_image_content_type(content: bytes) -> str | None:
     return None
 
 
-def build_package_image_object_name(package_slug: str, original_filename: str, content_type: str) -> str:
+def build_package_image_object_name(
+    package_slug: str, original_filename: str, content_type: str
+) -> str:
     extension = _CONTENT_TYPE_TO_EXTENSION[content_type]
     filename_stem = _sanitize_filename_stem(original_filename)
     package_segment = _sanitize_path_segment(package_slug)
     unique_suffix = uuid4().hex
-    return str(PurePosixPath("packages") / package_segment / f"{filename_stem}-{unique_suffix}.{extension}")
+    return str(
+        PurePosixPath("packages")
+        / package_segment
+        / f"{filename_stem}-{unique_suffix}.{extension}"
+    )
 
 
 def _sanitize_filename_stem(filename: str) -> str:

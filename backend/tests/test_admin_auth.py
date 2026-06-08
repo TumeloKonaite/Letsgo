@@ -15,7 +15,9 @@ from app.domain.auth.models import AuthenticatedUser
 from app.domain.packages.repository import PackageRecord
 from app.domain.packages.service import PackageService
 from app.infrastructure.database.models import PackagePublicationStatus
-from app.infrastructure.packages.in_memory_package_repository import InMemoryPackageRepository
+from app.infrastructure.packages.in_memory_package_repository import (
+    InMemoryPackageRepository,
+)
 
 
 class StubFirebaseAuthService:

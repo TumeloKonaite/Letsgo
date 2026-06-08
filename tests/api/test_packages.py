@@ -131,7 +131,9 @@ def seed_packages(session_factory) -> None:
             display_order=99,
         )
 
-        session.add_all([featured_package, boolean_published_package, unpublished_package])
+        session.add_all(
+            [featured_package, boolean_published_package, unpublished_package]
+        )
         session.commit()
 
 
@@ -178,7 +180,10 @@ def test_fetching_package_details_by_slug(package_client: TestClient) -> None:
     payload = response.json()
 
     assert payload["slug"] == "cape-town-explorer"
-    assert payload["full_description"] == "A four-day guided trip across Cape Town highlights."
+    assert (
+        payload["full_description"]
+        == "A four-day guided trip across Cape Town highlights."
+    )
     assert payload["images"][0]["image_url"] == "https://example.com/hero.jpg"
     assert payload["hero_image_url"] == "https://example.com/hero.jpg"
 
@@ -203,7 +208,9 @@ def test_itinerary_items_are_ordered_correctly(package_client: TestClient) -> No
     assert response.status_code == 200
     itinerary = response.json()["itinerary"]
 
-    assert [(item["day_number"], item["sort_order"], item["title"]) for item in itinerary] == [
+    assert [
+        (item["day_number"], item["sort_order"], item["title"]) for item in itinerary
+    ] == [
         (1, 1, "Airport pickup"),
         (1, 2, "Hotel check-in"),
         (2, 1, "Peninsula tour"),

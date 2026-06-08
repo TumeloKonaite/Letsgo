@@ -11,7 +11,9 @@ from app.infrastructure.database.session import (
     create_session_factory,
     initialize_database,
 )
-from app.infrastructure.packages.postgres_package_repository import PostgresPackageRepository
+from app.infrastructure.packages.postgres_package_repository import (
+    PostgresPackageRepository,
+)
 
 
 @pytest.fixture
@@ -113,5 +115,7 @@ def test_delete_package(package_repository: PostgresPackageRepository) -> None:
     assert package_repository.get_by_id(created_package.id) is None
 
 
-def test_delete_missing_package_returns_false(package_repository: PostgresPackageRepository) -> None:
+def test_delete_missing_package_returns_false(
+    package_repository: PostgresPackageRepository,
+) -> None:
     assert package_repository.delete(999) is False

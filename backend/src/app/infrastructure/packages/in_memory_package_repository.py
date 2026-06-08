@@ -48,9 +48,14 @@ class InMemoryPackageRepository:
         return self._packages.get(package_id)
 
     def get_by_slug(self, slug: str) -> PackageRecord | None:
-        return next((package for package in self._packages.values() if package.slug == slug), None)
+        return next(
+            (package for package in self._packages.values() if package.slug == slug),
+            None,
+        )
 
-    def update(self, package_id: int, package_data: Mapping[str, object]) -> PackageRecord | None:
+    def update(
+        self, package_id: int, package_data: Mapping[str, object]
+    ) -> PackageRecord | None:
         package = self._packages.get(package_id)
         if package is None:
             return None
@@ -59,11 +64,15 @@ class InMemoryPackageRepository:
             id=package.id,
             title=package_data.get("title", package.title),
             slug=package_data.get("slug", package.slug),
-            short_description=package_data.get("short_description", package.short_description),
+            short_description=package_data.get(
+                "short_description", package.short_description
+            ),
             description=package_data.get("description", package.description),
             destination=package_data.get("destination", package.destination),
             duration_days=package_data.get("duration_days", package.duration_days),
-            duration_nights=package_data.get("duration_nights", package.duration_nights),
+            duration_nights=package_data.get(
+                "duration_nights", package.duration_nights
+            ),
             price_from=package_data.get("price_from", package.price_from),
             currency=package_data.get("currency", package.currency),
             is_active=package_data.get("is_active", package.is_active),
@@ -101,7 +110,8 @@ class InMemoryPackageRepository:
         published_packages = [
             package
             for package in self._packages.values()
-            if package.status == PackagePublicationStatus.PUBLISHED or package.is_published
+            if package.status == PackagePublicationStatus.PUBLISHED
+            or package.is_published
         ]
         return [
             PackageListItemRecord(
@@ -123,7 +133,10 @@ class InMemoryPackageRepository:
         package = self.get_by_slug(slug)
         if package is None:
             return None
-        if package.status != PackagePublicationStatus.PUBLISHED and not package.is_published:
+        if (
+            package.status != PackagePublicationStatus.PUBLISHED
+            and not package.is_published
+        ):
             return None
         return PackageDetailRecord(
             id=package.id,

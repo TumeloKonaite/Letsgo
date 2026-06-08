@@ -46,7 +46,11 @@ class FirebaseAuthService:
         name = claims.get("name")
         return AuthenticatedUser(
             subject=subject,
-            username=name if isinstance(name, str) else email if isinstance(email, str) else None,
+            username=name
+            if isinstance(name, str)
+            else email
+            if isinstance(email, str)
+            else None,
             email=email if isinstance(email, str) else None,
             claims=dict(claims),
         )
