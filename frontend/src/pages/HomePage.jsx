@@ -7,6 +7,7 @@ import {
   serviceCategories,
 } from "../data/about";
 import { getPackages } from "../lib/api";
+import { ContactForm } from "../components/ContactForm";
 import { PackageCard } from "../components/PackageCard";
 import { SectionHeading } from "../components/SectionHeading";
 import { StatusPanel } from "../components/StatusPanel";
@@ -216,7 +217,7 @@ export function HomePage() {
 
       <footer className="footer" id="contact">
         <div className="container footer-grid">
-          <div className="fade-up">
+          <div className="footer-grid__intro fade-up">
             <h3>LET'S GO SOUTH AFRICA</h3>
             <p className="footer-copy">
               We are your trusted travel and tourism platform for exploring
@@ -246,6 +247,8 @@ export function HomePage() {
               <a href={`mailto:${contactDetails.email}`}>{contactDetails.email}</a>
             </div>
           </div>
+
+          <ContactForm />
         </div>
       </footer>
     </>

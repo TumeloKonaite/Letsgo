@@ -11,6 +11,8 @@ DEFAULT_API_VERSION = "0.1.0"
 DEFAULT_HOST = "0.0.0.0"
 DEFAULT_PORT = 8000
 DEFAULT_DATABASE_URL = "sqlite:///./letsgosa.db"
+DEFAULT_SMTP_PORT = 587
+DEFAULT_SMTP_USE_TLS = True
 PRODUCTION_ENVIRONMENTS = frozenset({"prod", "production"})
 DEFAULT_FIREBASE_ADMIN_ROLE = "admin"
 DEFAULT_STORAGE_PROVIDER = "gcs"
@@ -79,6 +81,13 @@ class Settings:
     host: str = DEFAULT_HOST
     port: int = DEFAULT_PORT
     database_url: str = DEFAULT_DATABASE_URL
+    smtp_host: str | None = None
+    smtp_port: int = DEFAULT_SMTP_PORT
+    smtp_username: str | None = None
+    smtp_password: str | None = None
+    smtp_from_email: str | None = None
+    contact_to_email: str | None = None
+    smtp_use_tls: bool = DEFAULT_SMTP_USE_TLS
     gcp_project_id: str | None = None
     google_cloud_project: str | None = None
     cloud_sql_connection_name: str | None = None
@@ -120,7 +129,21 @@ class Settings:
             port=int(
                 os.getenv("LETSGOSA_PORT") or os.getenv("PORT") or str(DEFAULT_PORT)
             ),
-            database_url=os.getenv("LETSGOSA_DATABASE_URL", DEFAULT_DATABASE_URL),
+            database_url=(
+                os.getenv("LETSGOSA_DATABASE_URL")
+                or os.getenv("DATABASE_URL")
+                or DEFAULT_DATABASE_URL
+            ),
+            smtp_host=os.getenv("SMTP_HOST"),
+            smtp_port=int(os.getenv("SMTP_PORT") or str(DEFAULT_SMTP_PORT)),
+            smtp_username=os.getenv("SMTP_USERNAME"),
+            smtp_password=os.getenv("SMTP_PASSWORD"),
+            smtp_from_email=os.getenv("SMTP_FROM_EMAIL"),
+            contact_to_email=os.getenv("CONTACT_TO_EMAIL"),
+            smtp_use_tls=_as_bool(
+                os.getenv("SMTP_USE_TLS"),
+                default=DEFAULT_SMTP_USE_TLS,
+            ),
             gcp_project_id=resolved_project_id,
             google_cloud_project=resolved_project_id,
             cloud_sql_connection_name=os.getenv("CLOUD_SQL_CONNECTION_NAME"),
@@ -177,20 +200,22 @@ class Settings:
     def validate_database_configuration(self) -> None:
         database_url = self.database_url.strip()
         if not database_url:
-            raise ValueError("LETSGOSA_DATABASE_URL must not be empty")
+            raise ValueError("DATABASE_URL / LETSGOSA_DATABASE_URL must not be empty")
 
         if not self.is_production:
             return
 
         if database_url.startswith("sqlite"):
             raise ValueError(
-                "Production requires PostgreSQL via LETSGOSA_DATABASE_URL; "
+                "Production requires PostgreSQL via DATABASE_URL or "
+                "LETSGOSA_DATABASE_URL; "
                 "SQLite is only supported for local development and testing"
             )
 
         if not database_url.startswith("postgresql"):
             raise ValueError(
-                "Production LETSGOSA_DATABASE_URL must use a PostgreSQL driver, "
+                "Production DATABASE_URL / LETSGOSA_DATABASE_URL must use a "
+                "PostgreSQL driver, "
                 "for example postgresql+psycopg://USER:PASSWORD@HOST:5432/letsgosa_prod"
             )
 
