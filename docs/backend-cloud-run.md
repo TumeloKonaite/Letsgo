@@ -1,45 +1,95 @@
 # Backend Cloud Run Deployment
 
-This document deploys the FastAPI backend to Cloud Run with:
+This document covers the backend production deploy path for:
 
 - project `letsgodb`
 - region `us-central1`
 - service `letsgosa-backend`
-- Cloud SQL instance `letsgodb:us-central1:free-trial-first-project`
+- Artifact Registry repository `letsgosa`
 
-The repo includes a root [Dockerfile](/c:/Users/l/Documents/letsgosa/Dockerfile) for Cloud Run source builds. It mirrors [backend/Dockerfile](/c:/Users/l/Documents/letsgosa/backend/Dockerfile), because `gcloud run deploy --source .` only reads a `Dockerfile` from the source root.
+The repo now deploys the backend through GitHub Actions in [.github/workflows/deploy-backend.yml](/c:/Users/l/Documents/letsgosa/.github/workflows/deploy-backend.yml). The workflow authenticates with Workload Identity Federation, builds the repo-root [Dockerfile](/c:/Users/l/Documents/letsgosa/Dockerfile), pushes the image to Artifact Registry, deploys that image to Cloud Run, and verifies `GET /health`.
 
-## Required runtime configuration
+## GitHub configuration
 
-Non-secret runtime variables live in [deploy/cloudrun/backend.env.yaml](/c:/Users/l/Documents/letsgosa/deploy/cloudrun/backend.env.yaml):
+Set these repository variables:
 
-```yaml
-GCP_PROJECT_ID: letsgodb
-FIREBASE_PROJECT_ID: letsgodb
-FIREBASE_ADMIN_ROLE: admin
-ENVIRONMENT: production
-CLOUD_SQL_CONNECTION_NAME: letsgodb:us-central1:free-trial-first-project
-GCS_BUCKET_NAME: letsgosa-package-images
-GCS_PUBLIC_BASE_URL: https://storage.googleapis.com/letsgosa-package-images
-LETSGOSA_CORS_ALLOW_ORIGINS: https://letsgodb.web.app,https://letsgodb.firebaseapp.com
+```env
+GCP_PROJECT_ID=letsgodb
+GCP_REGION=us-central1
+CLOUD_RUN_SERVICE=letsgosa-backend
+ARTIFACT_REGISTRY_REPOSITORY=letsgosa
 ```
 
-Store the database URL as a secret, not in Git:
+Set these repository secrets:
+
+```env
+WORKLOAD_IDENTITY_PROVIDER=projects/458140268449/locations/global/workloadIdentityPools/github-pool/providers/github-provider
+GCP_SERVICE_ACCOUNT=github-deployer@letsgodb.iam.gserviceaccount.com
+```
+
+The workflow uses GitHub configuration only for deployment metadata. Runtime application configuration must stay on the Cloud Run service or in Secret Manager.
+
+## Runtime configuration
+
+Do not keep backend runtime environment values in GitHub or in this repo.
+
+Configure non-secret environment variables directly on the Cloud Run service, either in the Cloud Run console or with `gcloud run services update`. Example values for this service:
+
+```env
+GCP_PROJECT_ID=letsgodb
+FIREBASE_PROJECT_ID=letsgodb
+FIREBASE_ADMIN_ROLE=admin
+ENVIRONMENT=production
+CLOUD_SQL_CONNECTION_NAME=letsgodb:us-central1:free-trial-first-project
+GCS_BUCKET_NAME=letsgosa-package-images
+GCS_PUBLIC_BASE_URL=https://storage.googleapis.com/letsgosa-package-images
+LETSGOSA_CORS_ALLOW_ORIGINS=https://letsgodb.web.app,https://letsgodb.firebaseapp.com
+```
+
+Example update command:
+
+```powershell
+& 'C:\Users\l\AppData\Local\Google\Cloud SDK\google-cloud-sdk\bin\gcloud.cmd' run services update letsgosa-backend `
+  --region us-central1 `
+  --project letsgodb `
+  --update-env-vars "GCP_PROJECT_ID=letsgodb,FIREBASE_PROJECT_ID=letsgodb,FIREBASE_ADMIN_ROLE=admin,ENVIRONMENT=production,CLOUD_SQL_CONNECTION_NAME=letsgodb:us-central1:free-trial-first-project,GCS_BUCKET_NAME=letsgosa-package-images,GCS_PUBLIC_BASE_URL=https://storage.googleapis.com/letsgosa-package-images,LETSGOSA_CORS_ALLOW_ORIGINS=https://letsgodb.web.app,https://letsgodb.firebaseapp.com"
+```
+
+Store secrets in Secret Manager and attach them to the Cloud Run service, not to the workflow. Example secret value:
 
 ```env
 LETSGOSA_DATABASE_URL=postgresql+psycopg://letsgodev:<DB_PASSWORD>@/letsgo?host=/cloudsql/letsgodb:us-central1:free-trial-first-project
 ```
 
-## One-time secret setup
+## One-time GCP setup
 
-Enable the Secret Manager API before the first deploy that uses `--set-secrets`:
+Enable the required APIs:
 
 ```powershell
-& 'C:\Users\l\AppData\Local\Google\Cloud SDK\google-cloud-sdk\bin\gcloud.cmd' services enable secretmanager.googleapis.com `
+& 'C:\Users\l\AppData\Local\Google\Cloud SDK\google-cloud-sdk\bin\gcloud.cmd' services enable `
+  artifactregistry.googleapis.com `
+  run.googleapis.com `
+  secretmanager.googleapis.com `
+  iamcredentials.googleapis.com `
   --project letsgodb
 ```
 
-Create or update the secret that Cloud Run will expose as `LETSGOSA_DATABASE_URL`:
+Create the Artifact Registry repository once:
+
+```powershell
+& 'C:\Users\l\AppData\Local\Google\Cloud SDK\google-cloud-sdk\bin\gcloud.cmd' artifacts repositories create letsgosa `
+  --project letsgodb `
+  --location us-central1 `
+  --repository-format docker
+```
+
+The backend image path used by the workflow is:
+
+```text
+us-central1-docker.pkg.dev/letsgodb/letsgosa/backend
+```
+
+Create the database secret if it does not exist:
 
 ```powershell
 $env:LETSGOSA_DATABASE_URL="postgresql+psycopg://letsgodev:<DB_PASSWORD>@/letsgo?host=/cloudsql/letsgodb:us-central1:free-trial-first-project"
@@ -56,107 +106,76 @@ $env:LETSGOSA_DATABASE_URL | & 'C:\Users\l\AppData\Local\Google\Cloud SDK\google
   --data-file=-
 ```
 
-Grant the Cloud Run runtime service account access to the secret before deploying.
-
-For the default Cloud Run runtime service account in project `458140268449`, run:
+Attach the secret to Cloud Run:
 
 ```powershell
-& 'C:\Users\l\AppData\Local\Google\Cloud SDK\google-cloud-sdk\bin\gcloud.cmd' secrets add-iam-policy-binding letsgosa-database-url `
-  --project letsgodb `
-  --member="serviceAccount:458140268449-compute@developer.gserviceaccount.com" `
-  --role="roles/secretmanager.secretAccessor"
-```
-
-If the service uses a different runtime service account, grant `roles/secretmanager.secretAccessor` to that account instead.
-
-## Package image bucket
-
-Create the package image bucket once:
-
-```powershell
-& 'C:\Users\l\AppData\Local\Google\Cloud SDK\google-cloud-sdk\bin\gcloud.cmd' storage buckets create gs://letsgosa-package-images `
-  --project letsgodb `
-  --location us-central1 `
-  --uniform-bucket-level-access
-```
-
-Grant the Cloud Run runtime service account object-write access on that bucket:
-
-```powershell
-& 'C:\Users\l\AppData\Local\Google\Cloud SDK\google-cloud-sdk\bin\gcloud.cmd' storage buckets add-iam-policy-binding gs://letsgosa-package-images `
-  --project letsgodb `
-  --member="serviceAccount:458140268449-compute@developer.gserviceaccount.com" `
-  --role="roles/storage.objectAdmin"
-```
-
-If the service uses a different runtime service account, bind `roles/storage.objectAdmin` for that account instead.
-
-To serve package images directly from `https://storage.googleapis.com/letsgosa-package-images/...`, make the bucket objects publicly readable:
-
-```powershell
-& 'C:\Users\l\AppData\Local\Google\Cloud SDK\google-cloud-sdk\bin\gcloud.cmd' storage buckets add-iam-policy-binding gs://letsgosa-package-images `
-  --project letsgodb `
-  --member="allUsers" `
-  --role="roles/storage.objectViewer"
-```
-
-## Deploy
-
-Deploy from the repository root:
-
-```powershell
-& 'C:\Users\l\AppData\Local\Google\Cloud SDK\google-cloud-sdk\bin\gcloud.cmd' run deploy letsgosa-backend `
-  --source . `
+& 'C:\Users\l\AppData\Local\Google\Cloud SDK\google-cloud-sdk\bin\gcloud.cmd' run services update letsgosa-backend `
   --region us-central1 `
   --project letsgodb `
-  --allow-unauthenticated `
-  --port 8080 `
-  --add-cloudsql-instances letsgodb:us-central1:free-trial-first-project `
-  --env-vars-file deploy/cloudrun/backend.env.yaml `
-  --set-secrets LETSGOSA_DATABASE_URL=letsgosa-database-url:latest
+  --update-secrets LETSGOSA_DATABASE_URL=letsgosa-database-url:latest
 ```
 
-This deploy uses:
+Create the deployment service account if it does not already exist:
 
-- the repo-root [Dockerfile](/c:/Users/l/Documents/letsgosa/Dockerfile) for the build
-- Cloud Run port `8080`
-- Cloud SQL Unix socket mounting at `/cloudsql/letsgodb:us-central1:free-trial-first-project`
+```text
+github-deployer@letsgodb.iam.gserviceaccount.com
+```
 
-## Redeploy
+Grant the GitHub deployment service account at least:
 
-For an ordinary backend code or config update, redeploy by rerunning the same `gcloud run deploy` command from the repository root:
+- `roles/run.admin`
+- `roles/artifactregistry.writer`
+- `roles/iam.serviceAccountUser` on the Cloud Run runtime service account
+- `roles/cloudbuild.builds.editor`
+
+Grant GitHub access to impersonate that service account:
 
 ```powershell
-& 'C:\Users\l\AppData\Local\Google\Cloud SDK\google-cloud-sdk\bin\gcloud.cmd' run deploy letsgosa-backend `
-  --source . `
-  --region us-central1 `
-  --project letsgodb `
-  --allow-unauthenticated `
-  --port 8080 `
-  --add-cloudsql-instances letsgodb:us-central1:free-trial-first-project `
-  --env-vars-file deploy/cloudrun/backend.env.yaml `
-  --set-secrets LETSGOSA_DATABASE_URL=letsgosa-database-url:latest
+& 'C:\Users\l\AppData\Local\Google\Cloud SDK\google-cloud-sdk\bin\gcloud.cmd' iam service-accounts add-iam-policy-binding `
+  'github-deployer@letsgodb.iam.gserviceaccount.com' `
+  --project='letsgodb' `
+  --role='roles/iam.workloadIdentityUser' `
+  --member='principalSet://iam.googleapis.com/projects/458140268449/locations/global/workloadIdentityPools/github-pool/attribute.repository/letsgosa/web_backend'
 ```
 
-Use this same flow after changing:
+Equivalent console path:
 
-- backend application code
-- [deploy/cloudrun/backend.env.yaml](/c:/Users/l/Documents/letsgosa/deploy/cloudrun/backend.env.yaml)
-- the Dockerfile used by Cloud Run
+1. IAM & Admin
+2. Service Accounts
+3. `github-deployer`
+4. Permissions
+5. Grant Access
+6. Principal:
 
-Only update the secret itself when the production database URL changes. If the secret value changes, add a new version first:
-
-```powershell
-$env:LETSGOSA_DATABASE_URL | & 'C:\Users\l\AppData\Local\Google\Cloud SDK\google-cloud-sdk\bin\gcloud.cmd' secrets versions add letsgosa-database-url `
-  --project letsgodb `
-  --data-file=-
+```text
+principalSet://iam.googleapis.com/projects/458140268449/locations/global/workloadIdentityPools/github-pool/attribute.repository/letsgosa/web_backend
 ```
 
-Then rerun the deploy command so Cloud Run points at `letsgosa-database-url:latest`.
+Role:
 
-If a deploy fails during revision creation because Secret Manager is disabled or inaccessible, fix the API/permissions issue first, then rerun the same deploy command. The previous serving revision remains active until a new revision is created successfully.
+```text
+Workload Identity User
+```
 
-## Post-deploy verification
+Grant the Cloud Run runtime service account at least:
+
+- `roles/secretmanager.secretAccessor` for `letsgosa-database-url`
+- `roles/storage.objectAdmin` for `gs://letsgosa-package-images`
+- `roles/cloudsql.client` if the service connects through Cloud SQL
+
+## Workflow behavior
+
+On every push to `main`, the deploy workflow:
+
+1. Authenticates to Google Cloud with Workload Identity Federation.
+2. Builds the backend image from the repo-root Dockerfile.
+3. Pushes two tags to Artifact Registry: `${GITHUB_SHA}` and `latest`.
+4. Deploys the `${GITHUB_SHA}` image to Cloud Run.
+5. Reads the service URL from Cloud Run and retries `GET /health` until it passes or times out.
+
+Because the workflow updates only the image, existing Cloud Run environment variables, secrets, traffic settings, and previous revisions remain in place for rollback.
+
+## Manual verification
 
 Fetch the public service URL:
 
@@ -180,32 +199,4 @@ Verify public package routes:
 Invoke-WebRequest "$serviceUrl/api/packages"
 ```
 
-Verify admin auth rejects missing or invalid Firebase bearer tokens:
-
-```powershell
-Invoke-WebRequest "$serviceUrl/api/admin/packages" -Method GET
-Invoke-WebRequest "$serviceUrl/api/admin/packages" -Method GET -Headers @{ Authorization = "Bearer invalid-token" }
-```
-
-Verify admin auth accepts a valid Firebase admin token:
-
-```powershell
-$headers = @{ Authorization = "Bearer <FIREBASE_ADMIN_ID_TOKEN>" }
-Invoke-WebRequest "$serviceUrl/api/admin/auth/me" -Headers $headers
-Invoke-WebRequest "$serviceUrl/api/admin/packages" -Headers $headers
-```
-
-Expected results:
-
-- `GET /health` returns `200`
-- `GET /health/db` returns `200`
-- `GET /api/packages` returns `200`
-- missing bearer token returns `401`
-- invalid token returns `401`
-- valid Firebase admin token returns `200`
-
-## Notes
-
-- Do not commit the database password, secret values, or Firebase admin tokens.
-- The backend accepts `ENVIRONMENT=production` for Cloud Run and still supports the legacy `LETSGOSA_ENV` name for local compatibility.
-- If the database schema is behind, run `alembic upgrade head` against the production database before switching traffic.
+If the database schema is behind, run `alembic upgrade head` against the production database before deploying or shifting traffic.
