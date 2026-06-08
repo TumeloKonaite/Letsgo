@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Callable
 from typing import TYPE_CHECKING, Any
 
 from app.domain.auth.models import AuthenticatedUser
@@ -19,14 +20,29 @@ class FirebaseTokenExpiredError(FirebaseTokenValidationError):
 
 
 class FirebaseAuthService:
-    def __init__(self, firebase_app: App) -> None:
+    def __init__(
+        self,
+        firebase_app: App | None = None,
+        app_factory: Callable[[], App] | None = None,
+    ) -> None:
+        if firebase_app is None and app_factory is None:
+            raise ValueError(
+                "FirebaseAuthService requires a firebase_app or app_factory"
+            )
         self._firebase_app = firebase_app
+        self._app_factory = app_factory
+
+    def _get_firebase_app(self) -> App:
+        if self._firebase_app is None:
+            assert self._app_factory is not None
+            self._firebase_app = self._app_factory()
+        return self._firebase_app
 
     def verify_token(self, token: str) -> AuthenticatedUser:
         from firebase_admin import auth as firebase_auth
 
         try:
-            claims = firebase_auth.verify_id_token(token, app=self._firebase_app)
+            claims = firebase_auth.verify_id_token(token, app=self._get_firebase_app())
         except firebase_auth.ExpiredIdTokenError as exc:
             raise FirebaseTokenExpiredError("Token expired") from exc
         except (

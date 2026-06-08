@@ -50,7 +50,7 @@ def create_application(settings: Settings | None = None) -> FastAPI:
         app.state.booking_service = BookingService(repository=booking_repository)
         app.state.storage_service = storage_service
         app.state.firebase_auth_service = FirebaseAuthService(
-            initialize_firebase_app(resolved_settings)
+            app_factory=lambda: initialize_firebase_app(resolved_settings)
         )
         app.state.started = True
 

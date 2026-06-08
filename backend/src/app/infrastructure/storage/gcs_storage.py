@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Callable
 from io import BytesIO
 from urllib.parse import quote, unquote, urlparse
 
@@ -24,11 +25,20 @@ class GcsStorageService(StorageService):
         bucket_name: str,
         public_base_url: str,
         client: Client | None = None,
+        client_factory: Callable[[], Client] | None = None,
     ) -> None:
         self._project_id = project_id.strip()
         self._bucket_name = bucket_name.strip()
         self._public_base_url = public_base_url.rstrip("/")
-        self._client = client or Client(project=self._project_id)
+        self._client = client
+        self._client_factory = client_factory or (
+            lambda: Client(project=self._project_id)
+        )
+
+    def _get_client(self) -> Client:
+        if self._client is None:
+            self._client = self._client_factory()
+        return self._client
 
     def upload_image(
         self, object_name: str, content: bytes, content_type: str
@@ -98,7 +108,7 @@ class GcsStorageService(StorageService):
         return None
 
     def _ensure_bucket_exists(self) -> Bucket:
-        bucket = self._client.bucket(self._bucket_name)
+        bucket = self._get_client().bucket(self._bucket_name)
         try:
             if not bucket.exists():
                 raise StorageBucketNotFoundError(

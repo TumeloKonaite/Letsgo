@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from decimal import Decimal
+from uuid import uuid4
 
 from fastapi.testclient import TestClient
 import pytest
@@ -46,7 +47,8 @@ def _seed_package(session_factory) -> int:
 
 @pytest.fixture
 def admin_packages_client(tmp_path) -> AdminPackagesClient:
-    database_url = f"sqlite:///{tmp_path / 'admin-packages.db'}"
+    database_path = tmp_path / f"admin-packages-{uuid4().hex}.db"
+    database_url = f"sqlite:///{database_path}"
     application = create_application(settings=build_test_settings(database_url))
 
     with TestClient(application) as client:
