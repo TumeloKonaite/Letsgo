@@ -11,3 +11,14 @@ export function getPackageBySlug(slug) {
     "Something went wrong while loading data."
   );
 }
+
+export function submitContactRequest(payload) {
+  return request(
+    "/api/contact",
+    {
+      method: "POST",
+      body: JSON.stringify(payload),
+    },
+    "Unable to send contact request."
+  );
+}

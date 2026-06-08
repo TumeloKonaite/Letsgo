@@ -10,14 +10,17 @@ from app.api.router import api_router
 from app.api.routes.health import router as health_router
 from app.core.config import Settings, get_settings
 from app.core.firebase import initialize_firebase_app
+from app.domain.contact.service import ContactService
 from app.domain.bookings.service import BookingService
 from app.domain.packages.service import PackageService
+from app.infrastructure.contact import build_contact_repository
 from app.infrastructure.bookings import PostgresBookingRepository
 from app.infrastructure.database.session import (
     create_database_engine,
     create_session_factory,
     initialize_database,
 )
+from app.infrastructure.email.smtp_email_sender import SMTPEmailSender
 from app.infrastructure.packages.postgres_package_repository import (
     PostgresPackageRepository,
 )
@@ -38,6 +41,16 @@ def create_application(settings: Settings | None = None) -> FastAPI:
 
         package_repository = PostgresPackageRepository(session_factory=session_factory)
         booking_repository = PostgresBookingRepository(session_factory=session_factory)
+        contact_repository = build_contact_repository(session_factory=session_factory)
+        contact_email_sender = SMTPEmailSender(
+            host=resolved_settings.smtp_host,
+            port=resolved_settings.smtp_port,
+            username=resolved_settings.smtp_username,
+            password=resolved_settings.smtp_password,
+            from_email=resolved_settings.smtp_from_email,
+            to_email=resolved_settings.contact_to_email,
+            use_tls=resolved_settings.smtp_use_tls,
+        )
         storage_service = create_storage_service(resolved_settings)
         app.state.settings = resolved_settings
         app.state.db_session_factory = session_factory
@@ -48,6 +61,12 @@ def create_application(settings: Settings | None = None) -> FastAPI:
         )
         app.state.booking_repository = booking_repository
         app.state.booking_service = BookingService(repository=booking_repository)
+        app.state.contact_repository = contact_repository
+        app.state.contact_email_sender = contact_email_sender
+        app.state.contact_service = ContactService(
+            email_sender=contact_email_sender,
+            repository=contact_repository,
+        )
         app.state.storage_service = storage_service
         app.state.firebase_auth_service = FirebaseAuthService(
             app_factory=lambda: initialize_firebase_app(resolved_settings)

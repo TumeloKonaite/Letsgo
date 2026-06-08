@@ -77,7 +77,7 @@ def test_production_settings_reject_sqlite_database_urls() -> None:
 
     with pytest.raises(
         ValueError,
-        match="Production requires PostgreSQL via LETSGOSA_DATABASE_URL",
+        match="Production requires PostgreSQL via DATABASE_URL or LETSGOSA_DATABASE_URL",
     ):
         settings.validate_database_configuration()
 
@@ -113,3 +113,13 @@ def test_non_production_settings_allow_sqlite_fallback() -> None:
 
     settings.validate_database_configuration()
     assert settings.database_url == config.DEFAULT_DATABASE_URL
+
+
+def test_settings_support_database_url_alias(monkeypatch) -> None:
+    monkeypatch.setattr("app.core.config._load_dotenv", lambda: None)
+    monkeypatch.delenv("LETSGOSA_DATABASE_URL", raising=False)
+    monkeypatch.setenv("DATABASE_URL", "sqlite:///./alias.db")
+
+    settings = config.Settings.from_env()
+
+    assert settings.database_url == "sqlite:///./alias.db"

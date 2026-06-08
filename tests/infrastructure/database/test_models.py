@@ -10,6 +10,8 @@ from app.infrastructure.database.models import (
     Base,
     Booking,
     BookingStatus,
+    ContactEmailStatus,
+    ContactSubmission,
     Package,
     PackageAvailability,
     PackageAvailabilityStatus,
@@ -27,14 +29,17 @@ from app.infrastructure.database.session import (
 def test_models_are_importable_and_registered() -> None:
     assert Package.__tablename__ == "packages"
     assert Booking.__tablename__ == "bookings"
+    assert ContactSubmission.__tablename__ == "contact_submissions"
     assert {
         "packages",
         "package_images",
         "package_itinerary_items",
         "package_availability",
         "bookings",
+        "contact_submissions",
     }.issubset(Base.metadata.tables.keys())
     assert PackagePublicationStatus.PUBLISHED.value == "published"
+    assert ContactEmailStatus.PENDING.value == "pending"
 
 
 def test_package_relationships_are_wired_correctly() -> None:
@@ -195,6 +200,15 @@ def test_booking_status_persists_lowercase_values_for_postgresql() -> None:
 
     assert bind_processor is not None
     assert bind_processor(BookingStatus.NEW) == "new"
+
+
+def test_contact_email_status_persists_lowercase_values_for_postgresql() -> None:
+    bind_processor = ContactSubmission.__table__.c.email_status.type.bind_processor(
+        postgresql.dialect()
+    )
+
+    assert bind_processor is not None
+    assert bind_processor(ContactEmailStatus.PENDING) == "pending"
 
 
 def test_initialize_database_creates_expected_tables_for_sqlite(tmp_path) -> None:

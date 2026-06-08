@@ -13,11 +13,14 @@ from app.auth.firebase_auth import (
     FirebaseTokenValidationError,
 )
 from app.core.config import Settings
+from app.domain.contact.repository import ContactRepository
+from app.domain.contact.service import ContactService
 from app.domain.bookings.repository import BookingRepository
 from app.domain.bookings.service import BookingService
 from app.domain.packages.repository import PackageRepository
 from app.domain.packages.service import PackageService
 from app.domain.packages.storage import StorageService
+from app.infrastructure.email.base import EmailSender
 from app.domain.auth.models import AuthenticatedUser
 
 bearer_scheme = HTTPBearer(auto_error=False)
@@ -37,6 +40,18 @@ def get_package_repository(request: Request) -> PackageRepository:
 
 def get_package_service(request: Request) -> PackageService:
     return request.app.state.package_service
+
+
+def get_contact_repository(request: Request) -> ContactRepository:
+    return request.app.state.contact_repository
+
+
+def get_contact_email_sender(request: Request) -> EmailSender:
+    return request.app.state.contact_email_sender
+
+
+def get_contact_service(request: Request) -> ContactService:
+    return request.app.state.contact_service
 
 
 def get_booking_repository(request: Request) -> BookingRepository:
