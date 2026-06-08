@@ -5,8 +5,13 @@ from pathlib import Path
 from app.domain.contact import ContactSubmission
 from app.infrastructure.contact import PostgresContactRepository
 from app.infrastructure.database.models import Base, ContactEmailStatus
-from app.infrastructure.database.models import ContactSubmission as ContactSubmissionModel
-from app.infrastructure.database.session import create_database_engine, create_session_factory
+from app.infrastructure.database.models import (
+    ContactSubmission as ContactSubmissionModel,
+)
+from app.infrastructure.database.session import (
+    create_database_engine,
+    create_session_factory,
+)
 
 
 def _build_repository(tmp_path: Path) -> tuple[PostgresContactRepository, object]:
@@ -41,7 +46,10 @@ def test_create_persists_contact_submission(tmp_path: Path) -> None:
     assert record.email == "jane@example.com"
     assert record.phone == "+27 82 123 4567"
     assert record.subject == "Custom safari planning"
-    assert record.message == "I would like help planning a private guided trip in September."
+    assert (
+        record.message
+        == "I would like help planning a private guided trip in September."
+    )
     assert record.email_status == ContactEmailStatus.PENDING
     assert record.email_error is None
     assert record.emailed_at is None

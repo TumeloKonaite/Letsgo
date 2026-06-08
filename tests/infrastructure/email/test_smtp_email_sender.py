@@ -48,7 +48,9 @@ def test_smtp_email_sender_sends_contact_request(
 
     sent_message = client.send_message.call_args.args[0]
     assert isinstance(sent_message, EmailMessage)
-    assert sent_message["Subject"] == "LetsGoSouth contact enquiry: Custom safari planning"
+    assert (
+        sent_message["Subject"] == "LetsGoSouth contact enquiry: Custom safari planning"
+    )
     assert sent_message["From"] == "hello@letsgosouth.africa"
     assert sent_message["To"] == "sales@letsgosouth.africa"
     assert sent_message["Reply-To"] == "jane@example.com"

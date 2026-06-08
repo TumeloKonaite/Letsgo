@@ -21,7 +21,9 @@ def submit_contact_request(
     contact_service: Annotated[ContactService, Depends(get_contact_service)],
 ) -> ContactResponse:
     try:
-        contact_service.submit_contact_request(ContactSubmission(**request.model_dump()))
+        contact_service.submit_contact_request(
+            ContactSubmission(**request.model_dump())
+        )
     except ContactServiceError as exc:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
