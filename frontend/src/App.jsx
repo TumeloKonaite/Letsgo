@@ -3,6 +3,8 @@ import { Navigate, Route, Routes } from "react-router-dom";
 import { ProtectedRoute } from "./auth/ProtectedRoute";
 import { Layout } from "./components/Layout";
 import { ProtectedAdminRoute } from "./components/ProtectedAdminRoute";
+import { AboutPage } from "./pages/AboutPage";
+import { ContactPage } from "./pages/ContactPage";
 import { AdminPackageEditorPage } from "./pages/admin/AdminPackageEditorPage";
 import { AdminPackagesPage } from "./pages/admin/AdminPackagesPage";
 import { Dashboard } from "./pages/admin/Dashboard";
@@ -17,6 +19,8 @@ export default function App() {
     <Routes>
       <Route element={<Layout />}>
         <Route path="/" element={<HomePage />} />
+        <Route path="/about" element={<AboutPage />} />
+        <Route path="/contact" element={<ContactPage />} />
         <Route path="/packages" element={<PackagesPage />} />
         <Route path="/packages/:slug" element={<PackageDetailPage />} />
         <Route path="/admin/login" element={<Login />} />
