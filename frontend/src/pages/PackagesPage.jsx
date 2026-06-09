@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 
 import { PackageCard } from "../components/PackageCard";
+import { PublicPageHero } from "../components/PublicPageHero";
 import { StatusPanel } from "../components/StatusPanel";
 import { getPackages } from "../lib/api";
 
@@ -39,18 +40,13 @@ export function PackagesPage() {
 
   return (
     <main className="page">
-      <div className="container">
-        <section className="page-hero fade-up">
-          <div className="page-hero__panel">
-            <span className="eyebrow-dark">Packages</span>
-            <h1>Browse published trips</h1>
-            <p>
-              This page is powered by `GET /api/packages` and shows loading,
-              empty, and error states for the public frontend.
-            </p>
-          </div>
-        </section>
+      <PublicPageHero
+        eyebrow="Packages"
+        title="Browse published trips"
+        description="Explore current LetsGoSouth packages, compare destinations, and move into the existing enquiry flow when you are ready."
+      />
 
+      <div className="container">
         <section className="section">
           {loading ? (
             <StatusPanel

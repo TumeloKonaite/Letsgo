@@ -1,7 +1,7 @@
 import { NavLink, Outlet, useLocation } from "react-router-dom";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
-import { useAuth } from "../auth/AuthProvider";
+import { SiteFooter } from "./SiteFooter";
 
 function ScrollManager() {
   const location = useLocation();
@@ -22,7 +22,12 @@ function ScrollManager() {
 }
 
 export function Layout() {
-  const { isAuthenticated, logout } = useAuth();
+  const location = useLocation();
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+
+  useEffect(() => {
+    setIsMenuOpen(false);
+  }, [location.pathname, location.hash]);
 
   return (
     <div className="site-shell">
@@ -30,45 +35,50 @@ export function Layout() {
       <header className="site-header">
         <div className="site-header__inner">
           <NavLink className="brand" to="/">
-            <span className="brand__mark">
-              LET'S <span className="brand__accent">GO!</span>
-            </span>
-            <span className="brand__sub">South Africa</span>
+            <img
+              className="brand__logo"
+              src="/images/branding/lets-go-logo.png"
+              alt="Let's Go South Africa"
+            />
           </NavLink>
 
-          <nav className="site-nav" aria-label="Primary">
-            <NavLink className="site-nav__link" to="/">
-              Home
-            </NavLink>
-            <a className="site-nav__link" href="/#about">
-              About Us
-            </a>
-            <NavLink className="site-nav__link" to="/packages">
-              Packages
-            </NavLink>
-            <NavLink className="site-nav__link" to={isAuthenticated ? "/admin/dashboard" : "/admin/login"}>
-              Admin
-            </NavLink>
-            {isAuthenticated ? (
-              <button
-                className="button-secondary site-nav__button"
-                type="button"
-                onClick={() => logout("/")}
-              >
-                Log out
-              </button>
-            ) : null}
-            <a className="site-nav__link" href="/#contact">
-              Contact
-            </a>
-            <NavLink className="button" to="/packages">
-              Book a Tour
-            </NavLink>
-          </nav>
+          <button
+            className="site-header__toggle"
+            type="button"
+            aria-expanded={isMenuOpen ? "true" : "false"}
+            aria-controls="primary-navigation"
+            onClick={() => setIsMenuOpen((currentState) => !currentState)}
+          >
+            <span />
+            <span />
+            <span />
+            <span className="sr-only">Toggle navigation</span>
+          </button>
+
+          <div className={`site-header__panel${isMenuOpen ? " is-open" : ""}`}>
+            <nav className="site-nav" id="primary-navigation" aria-label="Primary">
+              <NavLink className="site-nav__link" to="/" end>
+                Home
+              </NavLink>
+              <NavLink className="site-nav__link" to="/about">
+                About Us
+              </NavLink>
+              <NavLink className="site-nav__link" to="/packages">
+                Packages
+              </NavLink>
+              <NavLink className="site-nav__link" to="/contact">
+                Contact Us
+              </NavLink>
+              <NavLink className="button site-nav__cta" to="/packages">
+                Book a Tour
+              </NavLink>
+            </nav>
+          </div>
         </div>
       </header>
 
       <Outlet />
+      <SiteFooter />
     </div>
   );
 }

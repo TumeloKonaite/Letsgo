@@ -10,11 +10,18 @@ import {
   formatDateRange,
 } from "../lib/formatters";
 
+const fallbackSlides = [
+  "/images/hero/serengeti.jpg",
+  "/images/hero/giraffe.jpg",
+  "/images/hero/union-buildings.jpg",
+];
+
 export function PackageDetailPage() {
   const { slug } = useParams();
   const [packageDetail, setPackageDetail] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [currentHeroSlide, setCurrentHeroSlide] = useState(0);
 
   useEffect(() => {
     let isMounted = true;
@@ -43,6 +50,32 @@ export function PackageDetailPage() {
       isMounted = false;
     };
   }, [slug]);
+
+  const packageSlides = packageDetail
+    ? [packageDetail.hero_image_url, ...packageDetail.images.map((image) => image.image_url)].filter(Boolean)
+    : [];
+
+  const heroSlides = [...new Set(packageSlides)].length > 0
+    ? [...new Set(packageSlides)]
+    : fallbackSlides;
+
+  useEffect(() => {
+    setCurrentHeroSlide(0);
+  }, [slug, packageDetail?.hero_image_url, packageDetail?.images]);
+
+  useEffect(() => {
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      return undefined;
+    }
+
+    const intervalId = window.setInterval(() => {
+      setCurrentHeroSlide((currentIndex) => (currentIndex + 1) % heroSlides.length);
+    }, 5000);
+
+    return () => {
+      window.clearInterval(intervalId);
+    };
+  }, [heroSlides]);
 
   if (loading) {
     return (
@@ -80,12 +113,6 @@ export function PackageDetailPage() {
     return null;
   }
 
-  const heroStyle = packageDetail.hero_image_url
-    ? {
-        backgroundImage: `linear-gradient(180deg, rgba(16, 23, 34, 0.16), rgba(16, 23, 34, 0.68)), url("${packageDetail.hero_image_url}")`,
-      }
-    : undefined;
-
   return (
     <main className="page">
       <div className="container">
@@ -110,7 +137,32 @@ export function PackageDetailPage() {
             </div>
           </div>
 
-          <div className="package-detail__hero" style={heroStyle} />
+          <div className="package-detail__hero">
+            <div className="package-detail__media" aria-hidden="true">
+              {heroSlides.map((slide, index) => (
+                <div
+                  key={slide}
+                  className={`package-detail__slide${index === currentHeroSlide ? " is-active" : ""}`}
+                  style={{
+                    backgroundImage: `linear-gradient(180deg, rgba(16, 20, 17, 0.16), rgba(16, 20, 17, 0.68)), url("${slide}")`,
+                  }}
+                />
+              ))}
+            </div>
+
+            <div className="package-detail__hero-dots" aria-label="Package images">
+              {heroSlides.map((slide, index) => (
+                <button
+                  key={slide}
+                  className={`hero__dot${index === currentHeroSlide ? " is-active" : ""}`}
+                  type="button"
+                  aria-label={`Show package image ${index + 1}`}
+                  aria-pressed={index === currentHeroSlide ? "true" : "false"}
+                  onClick={() => setCurrentHeroSlide(index)}
+                />
+              ))}
+            </div>
+          </div>
         </section>
 
         <section className="section">

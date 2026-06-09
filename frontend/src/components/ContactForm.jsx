@@ -72,7 +72,7 @@ export function ContactForm() {
   return (
     <form className="contact-form fade-up" onSubmit={handleSubmit} noValidate>
       <div className="contact-form__header">
-        <span className="eyebrow">Enquiries</span>
+        <span className="eyebrow-dark">Enquiries</span>
         <h4>Send the LetsGoSouth team a direct message</h4>
         <p>
           Share what you are planning and we will reply with the right next step.

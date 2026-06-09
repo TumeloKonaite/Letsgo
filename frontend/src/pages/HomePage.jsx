@@ -1,21 +1,61 @@
 import { Link } from "react-router-dom";
 import { useEffect, useState } from "react";
 
-import {
-  aboutHighlights,
-  contactDetails,
-  serviceCategories,
-} from "../data/about";
+import { serviceCategories } from "../data/about";
 import { getPackages } from "../lib/api";
-import { ContactForm } from "../components/ContactForm";
 import { PackageCard } from "../components/PackageCard";
 import { SectionHeading } from "../components/SectionHeading";
+import { ServiceCategoryCard } from "../components/ServiceCategoryCard";
 import { StatusPanel } from "../components/StatusPanel";
+
+const heroSlides = [
+  {
+    image: "/images/hero/serengeti.jpg",
+    eyebrow: "Safari lodges and game drives",
+  },
+  {
+    image: "/images/hero/giraffe.jpg",
+    eyebrow: "Scenic routes and ocean escapes",
+  },
+  {
+    image: "/images/hero/union-buildings.jpg",
+    eyebrow: "Culture, heritage, and local discovery",
+  },
+];
+
+const heroHighlights = [
+  "Curated tours built for real travelers",
+  "Local support from arrival to departure",
+  "Safari, culture, scenery, and easy planning",
+];
+
+const heroFacts = [
+  {
+    label: "Experiences",
+    value: "Safari, culture, coast, and heritage",
+  },
+  {
+    label: "Support",
+    value: "Packages, transfers, and destination guidance",
+  },
+  {
+    label: "Next Step",
+    value: "Browse packages or send an enquiry",
+  },
+];
+
+const trustIndicators = [
+  "Guided Tours",
+  "Safari Adventures",
+  "Airport Transfers",
+  "Local Travel Support",
+];
 
 export function HomePage() {
   const [packages, setPackages] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [currentSlide, setCurrentSlide] = useState(0);
 
   useEffect(() => {
     let isMounted = true;
@@ -45,212 +85,198 @@ export function HomePage() {
     };
   }, []);
 
+  useEffect(() => {
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      return undefined;
+    }
+
+    const intervalId = window.setInterval(() => {
+      setCurrentSlide((currentIndex) => (currentIndex + 1) % heroSlides.length);
+    }, 5000);
+
+    return () => {
+      window.clearInterval(intervalId);
+    };
+  }, []);
+
   const featuredPackages = packages.filter((packageItem) => packageItem.is_featured);
   const packagesToShow = (featuredPackages.length ? featuredPackages : packages).slice(0, 3);
 
   return (
-    <>
-      <main className="page">
-        <div className="container">
-          <section className="hero fade-up">
-            <div className="hero__grid">
-              <div>
-                <span className="eyebrow">South African travel, thoughtfully planned</span>
-                <h1>Dream bigger. Discover more. Explore South Africa.</h1>
-                <p>
-                  LetsGoSouth brings together curated packages, trusted local
-                  guidance, and meaningful travel experiences for visitors who
-                  want more than a generic itinerary.
-                </p>
-
-                <div className="hero__actions">
-                  <Link className="button" to="/packages">
-                    Browse packages
-                  </Link>
-                  <a className="button-secondary" href="#about">
-                    About LetsGoSouth
-                  </a>
-                </div>
-              </div>
-
-              <div className="hero__stats">
-                <div className="stat-card">
-                  <span className="stat-card__label">Focus</span>
-                  <strong>Guided tours, safari escapes, cultural experiences</strong>
-                </div>
-                <div className="stat-card">
-                  <span className="stat-card__label">Approach</span>
-                  <strong>Local knowledge, reliable partners, clear booking flow</strong>
-                </div>
-                <div className="stat-card">
-                  <span className="stat-card__label">Ideal for</span>
-                  <strong>Local and international travelers exploring South Africa</strong>
-                </div>
-              </div>
-            </div>
-          </section>
-
-          <section className="section">
-            <SectionHeading
-              eyebrow="Packages"
-              title="Published travel packages from the backend"
-              description="The homepage highlights live package data from the API so visitors can immediately start exploring active trips."
+    <main className="page page--home">
+      <section className="hero hero--immersive">
+        <div className="hero__media" aria-hidden="true">
+          {heroSlides.map((slide, index) => (
+            <div
+              key={slide.image}
+              className={`hero__slide${index === currentSlide ? " is-active" : ""}`}
+              style={{ backgroundImage: `url('${slide.image}')` }}
             />
+          ))}
+        </div>
+        <div className="hero__overlay" />
 
-            {loading ? (
-              <StatusPanel
-                title="Loading packages"
-                message="Fetching the latest published LetsGoSouth itineraries."
-              />
-            ) : null}
+        <div className="container hero__content">
+          <div className="hero__copy fade-up">
+            <span className="eyebrow">{heroSlides[currentSlide].eyebrow}</span>
+            <h1>
+              Dream.
+              <br />
+              Discover.
+              <br />
+              Explore.
+            </h1>
+            <p>
+              Plan your South African adventure with a warmer, simpler travel
+              experience built around visual inspiration, curated packages, and
+              practical local support.
+            </p>
 
-            {!loading && error ? (
-              <StatusPanel
-                title="Packages could not be loaded"
-                message={error}
-                tone="error"
-                action={
-                  <Link className="button" to="/packages">
-                    Open packages page
-                  </Link>
-                }
-              />
-            ) : null}
-
-            {!loading && !error && packagesToShow.length === 0 ? (
-              <StatusPanel
-                title="No published packages yet"
-                message="Packages will appear here once they are published from the backend."
-                tone="empty"
-              />
-            ) : null}
-
-            {!loading && !error && packagesToShow.length > 0 ? (
-              <div className="package-grid">
-                {packagesToShow.map((packageItem) => (
-                  <PackageCard key={packageItem.slug} packageItem={packageItem} />
-                ))}
-              </div>
-            ) : null}
-          </section>
-
-          <section className="section" id="about">
-            <div className="about-grid">
-              <div className="about-grid__intro fade-up">
-                <span className="eyebrow-dark">About us</span>
-                <h2>Dream. Discover. Explore.</h2>
-                <p>
-                  We are a South African-driven tourism brand with a passion for
-                  travel, culture, and meaningful experiences. Our platform is
-                  designed for both local and international travelers looking for
-                  reliable information, trusted services, and genuine
-                  connections to destinations.
-                </p>
-                <p>We believe travel should be simple, safe, and rewarding.</p>
-
-                <div className="about-grid__actions">
-                  <Link className="button" to="/packages">
-                    Check availability
-                  </Link>
-                  <a className="button-secondary" href="#contact">
-                    Get in touch
-                  </a>
-                </div>
-              </div>
-
-              <div className="about-grid__content">
-                {aboutHighlights.map((highlight) => (
-                  <article className="about-card fade-up" key={highlight.title}>
-                    <h3>{highlight.title}</h3>
-                    {highlight.body ? <p>{highlight.body}</p> : null}
-                    {highlight.items ? (
-                      <ul>
-                        {highlight.items.map((item) => (
-                          <li key={item}>{item}</li>
-                        ))}
-                      </ul>
-                    ) : null}
-                  </article>
-                ))}
-              </div>
+            <div className="hero__actions">
+              <Link className="button" to="/packages">
+                Browse Packages
+              </Link>
+              <Link className="button-secondary button-secondary--light" to="/packages">
+                Check Availability
+              </Link>
             </div>
-          </section>
+          </div>
 
-          <section className="section">
-            <SectionHeading
-              eyebrow="Experiences"
-              title="Plan your South African adventure with the right mix of guidance and freedom"
-              description="The old LetsGoSouth about and landing pages focused on safari travel, local partnerships, and destination support. Those themes now live directly in the new public frontend."
-            />
+          <aside className="hero__spotlight fade-up">
+            <span className="hero__spotlight-label">Why travelers choose LetsGoSouth</span>
+            <ul className="hero__list">
+              {heroHighlights.map((highlight) => (
+                <li key={highlight}>{highlight}</li>
+              ))}
+            </ul>
+            <Link className="hero__spotlight-link" to="/contact">
+              Need help planning? Send an enquiry.
+            </Link>
+          </aside>
+        </div>
 
-            <div className="service-grid">
-              {serviceCategories.map((category) => (
-                <article className="service-card fade-up" key={category.title}>
-                  <span className="service-card__tag">{category.tag}</span>
-                  <h3>{category.title}</h3>
-                  <p>{category.body}</p>
-                </article>
+        <div className="container hero__bottom fade-up">
+          <div className="hero__dots" aria-label="Hero images">
+            {heroSlides.map((slide, index) => (
+              <button
+                key={slide.image}
+                className={`hero__dot${index === currentSlide ? " is-active" : ""}`}
+                type="button"
+                aria-label={`Show slide ${index + 1}`}
+                aria-pressed={index === currentSlide ? "true" : "false"}
+                onClick={() => setCurrentSlide(index)}
+              />
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <div className="container">
+        <section className="section home-assurance">
+          <div className="home-assurance__intro fade-up">
+            <span className="eyebrow-dark">Why Travel With Us</span>
+            <h2>Trusted South African travel experiences, planned with local support.</h2>
+            <p>
+              A calmer way to explore safari, scenery, transfers, and destination
+              guidance before you start comparing packages.
+            </p>
+            <div className="home-assurance__list" role="list" aria-label="Travel support">
+              {trustIndicators.map((item) => (
+                <span className="home-assurance__item" key={item} role="listitem">
+                  {item}
+                </span>
               ))}
             </div>
-          </section>
+          </div>
 
-          <section className="section">
-            <div className="cta-banner fade-up">
-              <span className="eyebrow">Ready to go</span>
-              <h2>Ready to adventure and enjoy the best of South Africa?</h2>
-              <p>
-                Browse available packages, compare itineraries, and contact the
-                LetsGoSouth team when you are ready to lock in the right trip.
-              </p>
-              <div className="cta-banner__actions">
+          <div className="home-assurance__facts">
+            {heroFacts.map((fact) => (
+              <article className="home-assurance__card fade-up" key={fact.label}>
+                <span>{fact.label}</span>
+                <strong>{fact.value}</strong>
+              </article>
+            ))}
+          </div>
+        </section>
+
+        <section className="section">
+          <SectionHeading
+            eyebrow="Featured Packages"
+            title="Start with live package listings already available on the site"
+            description="Browse current trips straight from the backend and compare published options before you enquire."
+          />
+
+          {loading ? (
+            <StatusPanel
+              title="Loading packages"
+              message="Fetching the latest published LetsGoSouth itineraries."
+            />
+          ) : null}
+
+          {!loading && error ? (
+            <StatusPanel
+              title="Packages could not be loaded"
+              message={error}
+              tone="error"
+              action={(
                 <Link className="button" to="/packages">
-                  Book a tour
+                  Open packages page
                 </Link>
-                <a className="button-secondary" href={`mailto:${contactDetails.email}`}>
-                  Contact us
-                </a>
-              </div>
-            </div>
-          </section>
-        </div>
-      </main>
+              )}
+            />
+          ) : null}
 
-      <footer className="footer" id="contact">
-        <div className="container footer-grid">
-          <div className="footer-grid__intro fade-up">
-            <h3>LET'S GO SOUTH AFRICA</h3>
-            <p className="footer-copy">
-              We are your trusted travel and tourism platform for exploring
-              South Africa. From iconic landmarks and wildlife safaris to
-              vibrant cities and hidden gems, we help travelers discover the
-              best experiences this country has to offer.
+          {!loading && !error && packagesToShow.length === 0 ? (
+            <StatusPanel
+              title="No published packages yet"
+              message="Packages will appear here once they are published from the backend."
+              tone="empty"
+            />
+          ) : null}
+
+          {!loading && !error && packagesToShow.length > 0 ? (
+            <div className="package-grid">
+              {packagesToShow.map((packageItem) => (
+                <PackageCard key={packageItem.slug} packageItem={packageItem} />
+              ))}
+            </div>
+          ) : null}
+        </section>
+
+        <section className="section">
+          <SectionHeading
+            eyebrow="Services"
+            title="Six tourism-focused categories travelers can understand at a glance"
+            description="The homepage now emphasizes practical visitor needs such as safari planning, transfers, culture, heritage, and destination support."
+          />
+
+          <div className="service-grid">
+            {serviceCategories.map((category) => (
+              <ServiceCategoryCard key={category.title} category={category} />
+            ))}
+          </div>
+        </section>
+
+        <section className="section section--tight">
+          <div className="cta-banner fade-up">
+            <span className="eyebrow">Plan Your Trip</span>
+            <h2>Start Planning Your Adventure</h2>
+            <p>
+              Browse existing packages, check availability through the current
+              package flow, or contact the team for guidance on your next
+              itinerary.
             </p>
-          </div>
-
-          <div className="fade-up">
-            <h4>Useful links</h4>
-            <div className="footer-links">
-              <Link to="/">Home</Link>
-              <a href="/#about">About us</a>
-              <Link to="/packages">Packages</Link>
-              <a href={`mailto:${contactDetails.email}`}>Contact us</a>
+            <div className="cta-banner__actions">
+              <Link className="button" to="/packages">
+                Book a Tour
+              </Link>
+              <Link className="button-secondary button-secondary--light" to="/contact">
+                Contact Us
+              </Link>
             </div>
           </div>
-
-          <div className="fade-up">
-            <h4>Find us</h4>
-            <div className="footer-links">
-              <span>{contactDetails.address}</span>
-              <a href={`tel:${contactDetails.phone.replace(/\s+/g, "")}`}>
-                {contactDetails.phone}
-              </a>
-              <a href={`mailto:${contactDetails.email}`}>{contactDetails.email}</a>
-            </div>
-          </div>
-
-          <ContactForm />
-        </div>
-      </footer>
-    </>
+        </section>
+      </div>
+    </main>
   );
 }
