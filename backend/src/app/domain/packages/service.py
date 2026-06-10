@@ -1,8 +1,12 @@
 from __future__ import annotations
 
 from app.api.schemas.packages import (
+    AdminPackageResponse,
+    AdminPackageInclusionInput,
+    AdminPackageItineraryInput,
     AvailabilityItem,
     ItineraryItem,
+    PackageInclusion,
     PackageCreate,
     PackageDetail,
     PackageImage,
@@ -13,9 +17,12 @@ from app.api.schemas.packages import (
 from app.domain.packages.repository import (
     AvailabilityItemRecord,
     ItineraryItemRecord,
+    ItineraryItemData,
     PackageCreateData,
     PackageDetailRecord,
     PackageImageRecord,
+    PackageInclusionData,
+    PackageInclusionRecord,
     PackageListItemRecord,
     PackageRecord,
     PackageRepository,
@@ -46,11 +53,11 @@ class PackageService:
             for package in self._repository.list_all_packages()
         ]
 
-    def get_package(self, package_id: int) -> PackageResponse:
+    def get_package(self, package_id: int) -> AdminPackageResponse:
         package = self._repository.get_by_id(package_id)
         if package is None:
             raise PackageNotFoundError(package_id)
-        return self._to_package_response(package)
+        return self._to_admin_package_response(package)
 
     def list_published_packages(self) -> list[PackageListItem]:
         return [
@@ -64,30 +71,30 @@ class PackageService:
             raise PackageNotFoundError(slug)
         return self._to_detail(package)
 
-    def create_package(self, package_data: PackageCreate) -> PackageResponse:
+    def create_package(self, package_data: PackageCreate) -> AdminPackageResponse:
         self._ensure_slug_is_unique(package_data.slug)
         package = self._repository.create(self._to_create_data(package_data))
-        return self._to_package_response(package)
+        return self._to_admin_package_response(package)
 
     def update_package(
         self, package_id: int, package_data: PackageUpdate
-    ) -> PackageResponse:
+    ) -> AdminPackageResponse:
         package = self._repository.get_by_id(package_id)
         if package is None:
             raise PackageNotFoundError(package_id)
 
-        updates = package_data.model_dump(exclude_unset=True)
+        updates = self._to_update_data(package_data)
         new_slug = updates.get("slug")
         if isinstance(new_slug, str) and new_slug != package.slug:
             self._ensure_slug_is_unique(new_slug, exclude_package_id=package_id)
 
         if not updates:
-            return self._to_package_response(package)
+            return self._to_admin_package_response(package)
 
         updated_package = self._repository.update(package_id, updates)
         if updated_package is None:
             raise PackageNotFoundError(package_id)
-        return self._to_package_response(updated_package)
+        return self._to_admin_package_response(updated_package)
 
     def publish_package(self, package_id: int) -> PackageResponse:
         package = self._repository.publish(package_id)
@@ -132,6 +139,46 @@ class PackageService:
             is_published=package_data.is_published,
             is_featured=package_data.is_featured,
             display_order=package_data.display_order,
+            itinerary=tuple(
+                self._to_itinerary_item_data(item) for item in package_data.itinerary
+            ),
+            inclusions=tuple(
+                self._to_inclusion_data(item) for item in package_data.inclusions
+            ),
+        )
+
+    def _to_update_data(self, package_data: PackageUpdate) -> dict[str, object]:
+        updates = package_data.model_dump(exclude_unset=True)
+        if "itinerary" in updates:
+            updates["itinerary"] = tuple(
+                self._to_itinerary_item_data(item)
+                for item in package_data.itinerary or []
+            )
+        if "inclusions" in updates:
+            updates["inclusions"] = tuple(
+                self._to_inclusion_data(item)
+                for item in package_data.inclusions or []
+            )
+        return updates
+
+    def _to_itinerary_item_data(
+        self, item: AdminPackageItineraryInput
+    ) -> ItineraryItemData:
+        duration = item.duration.strip() if isinstance(item.duration, str) else None
+        return ItineraryItemData(
+            title=item.title.strip(),
+            description=item.description.strip(),
+            duration=duration or None,
+            display_order=item.display_order,
+        )
+
+    def _to_inclusion_data(
+        self, item: AdminPackageInclusionInput
+    ) -> PackageInclusionData:
+        return PackageInclusionData(
+            name=item.name.strip(),
+            type=item.type.strip(),
+            display_order=item.display_order,
         )
 
     def _to_package_response(self, package: PackageRecord) -> PackageResponse:
@@ -151,6 +198,13 @@ class PackageService:
             is_published=package.is_published,
             is_featured=package.is_featured,
             display_order=package.display_order,
+        )
+
+    def _to_admin_package_response(self, package: PackageRecord) -> AdminPackageResponse:
+        return AdminPackageResponse(
+            **self._to_package_response(package).model_dump(),
+            itinerary=[self._to_itinerary_item(item) for item in package.itinerary],
+            inclusions=[self._to_inclusion(item) for item in package.inclusions],
         )
 
     def _to_list_item(self, package: PackageListItemRecord) -> PackageListItem:
@@ -184,6 +238,7 @@ class PackageService:
             is_featured=package.is_featured,
             images=[self._to_image(image) for image in package.images],
             itinerary=[self._to_itinerary_item(item) for item in package.itinerary],
+            inclusions=[self._to_inclusion(item) for item in package.inclusions],
             availability=[
                 self._to_availability_item(item) for item in package.availability
             ],
@@ -201,10 +256,18 @@ class PackageService:
     def _to_itinerary_item(self, item: ItineraryItemRecord) -> ItineraryItem:
         return ItineraryItem(
             id=item.id,
-            day_number=item.day_number,
             title=item.title,
             description=item.description,
-            sort_order=item.sort_order,
+            duration=item.duration,
+            display_order=item.display_order,
+        )
+
+    def _to_inclusion(self, item: PackageInclusionRecord) -> PackageInclusion:
+        return PackageInclusion(
+            id=item.id,
+            name=item.name,
+            type=item.type,
+            display_order=item.display_order,
         )
 
     def _to_availability_item(self, item: AvailabilityItemRecord) -> AvailabilityItem:

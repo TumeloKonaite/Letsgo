@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import date
 from decimal import Decimal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 from app.infrastructure.database.models import PackagePublicationStatus
 
 
@@ -17,10 +17,17 @@ class PackageImage(BaseModel):
 
 class ItineraryItem(BaseModel):
     id: int
-    day_number: int = Field(..., gt=0)
     title: str
     description: str
-    sort_order: int = Field(..., ge=0)
+    duration: str | None = Field(default=None, max_length=100)
+    display_order: int = Field(..., ge=0)
+
+
+class PackageInclusion(BaseModel):
+    id: int
+    name: str
+    type: str
+    display_order: int = Field(..., ge=0)
 
 
 class AvailabilityItem(BaseModel):
@@ -59,7 +66,23 @@ class PackageDetail(BaseModel):
     is_featured: bool = False
     images: list[PackageImage]
     itinerary: list[ItineraryItem]
+    inclusions: list[PackageInclusion]
     availability: list[AvailabilityItem]
+
+
+class AdminPackageItineraryInput(BaseModel):
+    id: int | None = None
+    title: str = Field(..., min_length=1, max_length=200)
+    description: str = Field(..., min_length=1)
+    duration: str | None = Field(default=None, max_length=100)
+    display_order: int = Field(default=0, ge=0)
+
+
+class AdminPackageInclusionInput(BaseModel):
+    id: int | None = None
+    name: str = Field(..., min_length=1, max_length=200)
+    type: str = Field(..., pattern="^(included|excluded)$")
+    display_order: int = Field(default=0, ge=0)
 
 
 class AdminPackageBase(BaseModel):
@@ -77,6 +100,13 @@ class AdminPackageBase(BaseModel):
     is_published: bool = False
     is_featured: bool = False
     display_order: int = Field(default=0, ge=0)
+    itinerary: list[AdminPackageItineraryInput] = Field(default_factory=list)
+    inclusions: list[AdminPackageInclusionInput] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def validate_nested_display_orders(self) -> "AdminPackageBase":
+        _validate_nested_display_orders(self.itinerary, self.inclusions)
+        return self
 
 
 class PackageCreate(AdminPackageBase):
@@ -98,6 +128,13 @@ class PackageUpdate(BaseModel):
     is_published: bool | None = None
     is_featured: bool | None = None
     display_order: int | None = Field(default=None, ge=0)
+    itinerary: list[AdminPackageItineraryInput] | None = None
+    inclusions: list[AdminPackageInclusionInput] | None = None
+
+    @model_validator(mode="after")
+    def validate_nested_display_orders(self) -> "PackageUpdate":
+        _validate_nested_display_orders(self.itinerary, self.inclusions)
+        return self
 
 
 class PackageResponse(BaseModel):
@@ -140,4 +177,27 @@ class AdminPackageImageResponse(BaseModel):
 
 
 class AdminPackageResponse(PackageResponse):
-    pass
+    itinerary: list[ItineraryItem] = Field(default_factory=list)
+    inclusions: list[PackageInclusion] = Field(default_factory=list)
+
+
+def _validate_nested_display_orders(
+    itinerary: list[AdminPackageItineraryInput] | None,
+    inclusions: list[AdminPackageInclusionInput] | None,
+) -> None:
+    if itinerary is not None:
+        itinerary_orders = [item.display_order for item in itinerary]
+        if len(itinerary_orders) != len(set(itinerary_orders)):
+            raise ValueError("Itinerary display_order values must be unique.")
+
+    if inclusions is not None:
+        for inclusion_type in ("included", "excluded"):
+            scoped_orders = [
+                item.display_order
+                for item in inclusions
+                if item.type == inclusion_type
+            ]
+            if len(scoped_orders) != len(set(scoped_orders)):
+                raise ValueError(
+                    f"{inclusion_type.title()} item display_order values must be unique."
+                )

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import date
 from decimal import Decimal
 from typing import Mapping, Protocol
@@ -20,10 +20,18 @@ class PackageImageRecord:
 @dataclass(frozen=True, slots=True)
 class ItineraryItemRecord:
     id: int
-    day_number: int
     title: str
     description: str
-    sort_order: int
+    duration: str | None
+    display_order: int
+
+
+@dataclass(frozen=True, slots=True)
+class PackageInclusionRecord:
+    id: int
+    name: str
+    type: str
+    display_order: int
 
 
 @dataclass(frozen=True, slots=True)
@@ -64,6 +72,7 @@ class PackageDetailRecord:
     is_featured: bool
     images: tuple[PackageImageRecord, ...]
     itinerary: tuple[ItineraryItemRecord, ...]
+    inclusions: tuple[PackageInclusionRecord, ...]
     availability: tuple[AvailabilityItemRecord, ...]
 
 
@@ -84,6 +93,23 @@ class PackageRecord:
     is_published: bool
     is_featured: bool
     display_order: int
+    itinerary: tuple[ItineraryItemRecord, ...] = field(default_factory=tuple)
+    inclusions: tuple[PackageInclusionRecord, ...] = field(default_factory=tuple)
+
+
+@dataclass(frozen=True, slots=True)
+class ItineraryItemData:
+    title: str
+    description: str
+    duration: str | None
+    display_order: int
+
+
+@dataclass(frozen=True, slots=True)
+class PackageInclusionData:
+    name: str
+    type: str
+    display_order: int
 
 
 @dataclass(frozen=True, slots=True)
@@ -102,6 +128,8 @@ class PackageCreateData:
     is_published: bool
     is_featured: bool
     display_order: int
+    itinerary: tuple[ItineraryItemData, ...] = field(default_factory=tuple)
+    inclusions: tuple[PackageInclusionData, ...] = field(default_factory=tuple)
 
 
 class PackageRepository(Protocol):

@@ -4,7 +4,11 @@ from decimal import Decimal
 
 import pytest
 
-from app.domain.packages.repository import PackageCreateData
+from app.domain.packages.repository import (
+    ItineraryItemData,
+    PackageCreateData,
+    PackageInclusionData,
+)
 from app.infrastructure.database.models import PackagePublicationStatus
 from app.infrastructure.database.session import (
     create_database_engine,
@@ -47,6 +51,21 @@ def _create_package(repository: PostgresPackageRepository):
             is_published=False,
             is_featured=False,
             display_order=1,
+            itinerary=(
+                ItineraryItemData(
+                    title="Airport pickup",
+                    description="Meet and transfer.",
+                    duration="30 minutes",
+                    display_order=0,
+                ),
+            ),
+            inclusions=(
+                PackageInclusionData(
+                    name="Bottled water",
+                    type="included",
+                    display_order=0,
+                ),
+            ),
         )
     )
 
@@ -58,6 +77,8 @@ def test_create_and_get_by_id(package_repository: PostgresPackageRepository) -> 
 
     assert loaded_package is not None
     assert loaded_package.slug == "repository-package"
+    assert loaded_package.itinerary[0].title == "Airport pickup"
+    assert loaded_package.inclusions[0].name == "Bottled water"
 
 
 def test_get_by_slug(package_repository: PostgresPackageRepository) -> None:
@@ -83,6 +104,37 @@ def test_update_package(package_repository: PostgresPackageRepository) -> None:
     assert updated_package is not None
     assert updated_package.title == "Updated Repository Package"
     assert updated_package.price_from == Decimal("4999.00")
+
+
+def test_update_package_replaces_nested_content(
+    package_repository: PostgresPackageRepository,
+) -> None:
+    created_package = _create_package(package_repository)
+
+    updated_package = package_repository.update(
+        created_package.id,
+        {
+            "itinerary": (
+                ItineraryItemData(
+                    title="Mandela House",
+                    description="Museum visit.",
+                    duration="45 minutes",
+                    display_order=0,
+                ),
+            ),
+            "inclusions": (
+                PackageInclusionData(
+                    name="Lunch",
+                    type="excluded",
+                    display_order=0,
+                ),
+            ),
+        },
+    )
+
+    assert updated_package is not None
+    assert updated_package.itinerary[0].title == "Mandela House"
+    assert updated_package.inclusions[0].type == "excluded"
 
 
 def test_publish_package(package_repository: PostgresPackageRepository) -> None:

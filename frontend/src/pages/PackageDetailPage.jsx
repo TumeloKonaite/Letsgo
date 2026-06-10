@@ -113,6 +113,14 @@ export function PackageDetailPage() {
     return null;
   }
 
+  const inclusionItems = packageDetail.inclusions ?? [];
+  const includedItems = inclusionItems.filter(
+    (item) => item.type === "included"
+  );
+  const excludedItems = inclusionItems.filter(
+    (item) => item.type === "excluded"
+  );
+
   return (
     <main className="page">
       <div className="container">
@@ -194,17 +202,25 @@ export function PackageDetailPage() {
         <section className="section">
           <SectionHeading
             eyebrow="Itinerary"
-            title="Day-by-day breakdown"
+            title="Tour breakdown"
             description="Loaded from `GET /api/packages/{slug}`."
           />
 
-          <div className="detail-grid">
+          <div className="package-timeline">
             {packageDetail.itinerary.length > 0 ? (
-              packageDetail.itinerary.map((item) => (
-                <article className="detail-panel fade-up" key={item.id}>
-                  <span className="eyebrow-dark">Day {item.day_number}</span>
-                  <h3>{item.title}</h3>
-                  <p>{item.description}</p>
+              packageDetail.itinerary.map((item, index) => (
+                <article className="package-timeline__item detail-panel fade-up" key={item.id}>
+                  <div className="package-timeline__marker" aria-hidden="true">
+                    {index + 1}
+                  </div>
+                  <div className="package-timeline__content">
+                    <span className="eyebrow-dark">Stop {index + 1}</span>
+                    <h3>{item.title}</h3>
+                    <p>{item.description}</p>
+                    {item.duration ? (
+                      <div className="package-timeline__duration">{item.duration}</div>
+                    ) : null}
+                  </div>
                 </article>
               ))
             ) : (
@@ -215,6 +231,50 @@ export function PackageDetailPage() {
               />
             )}
           </div>
+        </section>
+
+        <section className="section">
+          <SectionHeading
+            eyebrow="Pricing"
+            title="Cost Includes And Excludes"
+            description="Review what is covered in the package price and what guests should plan for separately."
+          />
+
+          {includedItems.length > 0 || excludedItems.length > 0 ? (
+            <div className="package-inclusions-grid">
+              <article className="detail-panel fade-up">
+                <h3>Cost Includes</h3>
+                {includedItems.length > 0 ? (
+                  <ul className="package-checklist package-checklist--included">
+                    {includedItems.map((item) => (
+                      <li key={item.id}>{item.name}</li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p>No included items have been published yet.</p>
+                )}
+              </article>
+
+              <article className="detail-panel fade-up">
+                <h3>Cost Excludes</h3>
+                {excludedItems.length > 0 ? (
+                  <ul className="package-checklist package-checklist--excluded">
+                    {excludedItems.map((item) => (
+                      <li key={item.id}>{item.name}</li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p>No excluded items have been published yet.</p>
+                )}
+              </article>
+            </div>
+          ) : (
+            <StatusPanel
+              title="No pricing breakdown published"
+              message="This package does not have cost include or exclude items yet."
+              tone="empty"
+            />
+          )}
         </section>
 
         <section className="section">

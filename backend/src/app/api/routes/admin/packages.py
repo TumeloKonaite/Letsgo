@@ -5,6 +5,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Response, status
 
 from app.api.schemas.packages import (
+    AdminPackageResponse,
     AdminPackagePutRequest,
     PackageCreate,
     PackageResponse,
@@ -50,7 +51,7 @@ def list_packages(
 
 @router.get(
     "/{package_id}",
-    response_model=PackageResponse,
+    response_model=AdminPackageResponse,
 )
 def get_package(
     package_id: int,
@@ -64,7 +65,7 @@ def get_package(
 
 @router.post(
     "",
-    response_model=PackageResponse,
+    response_model=AdminPackageResponse,
     status_code=status.HTTP_201_CREATED,
 )
 def create_package(
@@ -79,7 +80,7 @@ def create_package(
 
 @router.put(
     "/{package_id}",
-    response_model=PackageResponse,
+    response_model=AdminPackageResponse,
 )
 def replace_package(
     package_id: int,
@@ -97,7 +98,7 @@ def replace_package(
 
 @router.patch(
     "/{package_id}",
-    response_model=PackageResponse,
+    response_model=AdminPackageResponse,
 )
 def update_package(
     package_id: int,
