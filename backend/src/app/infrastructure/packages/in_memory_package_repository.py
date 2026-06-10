@@ -3,8 +3,12 @@ from __future__ import annotations
 from typing import Mapping
 
 from app.domain.packages.repository import (
+    ItineraryItemData,
+    ItineraryItemRecord,
     PackageCreateData,
     PackageDetailRecord,
+    PackageInclusionData,
+    PackageInclusionRecord,
     PackageListItemRecord,
     PackageRecord,
 )
@@ -13,8 +17,23 @@ from app.infrastructure.database.models import PackagePublicationStatus
 
 class InMemoryPackageRepository:
     def __init__(self, packages: list[PackageRecord] | None = None) -> None:
-        self._packages = {package.id: package for package in packages or []}
+        seeded_packages = packages or []
+        self._packages = {package.id: package for package in seeded_packages}
         self._next_id = max(self._packages, default=0) + 1
+        self._next_itinerary_id = (
+            max(
+                (item.id for package in seeded_packages for item in package.itinerary),
+                default=0,
+            )
+            + 1
+        )
+        self._next_inclusion_id = (
+            max(
+                (item.id for package in seeded_packages for item in package.inclusions),
+                default=0,
+            )
+            + 1
+        )
 
     def list_all_packages(self) -> list[PackageRecord]:
         return sorted(
@@ -39,6 +58,8 @@ class InMemoryPackageRepository:
             is_published=package_data.is_published,
             is_featured=package_data.is_featured,
             display_order=package_data.display_order,
+            itinerary=self._build_itinerary_records(package_data.itinerary),
+            inclusions=self._build_inclusion_records(package_data.inclusions),
         )
         self._packages[package.id] = package
         self._next_id += 1
@@ -80,6 +101,12 @@ class InMemoryPackageRepository:
             is_published=package_data.get("is_published", package.is_published),
             is_featured=package_data.get("is_featured", package.is_featured),
             display_order=package_data.get("display_order", package.display_order),
+            itinerary=self._build_itinerary_records(
+                package_data.get("itinerary", package.itinerary)
+            ),
+            inclusions=self._build_inclusion_records(
+                package_data.get("inclusions", package.inclusions)
+            ),
         )
         self._packages[package_id] = updated_package
         return updated_package
@@ -150,6 +177,50 @@ class InMemoryPackageRepository:
             currency=package.currency,
             is_featured=package.is_featured,
             images=(),
-            itinerary=(),
+            itinerary=package.itinerary,
+            inclusions=package.inclusions,
             availability=(),
         )
+
+    def _build_itinerary_records(
+        self, items: object
+    ) -> tuple[ItineraryItemRecord, ...]:
+        records: list[ItineraryItemRecord] = []
+        for item in items or ():
+            if isinstance(item, ItineraryItemRecord):
+                records.append(item)
+                continue
+
+            if isinstance(item, ItineraryItemData):
+                records.append(
+                    ItineraryItemRecord(
+                        id=self._next_itinerary_id,
+                        title=item.title,
+                        description=item.description,
+                        duration=item.duration,
+                        display_order=item.display_order,
+                    )
+                )
+                self._next_itinerary_id += 1
+        return tuple(records)
+
+    def _build_inclusion_records(
+        self, items: object
+    ) -> tuple[PackageInclusionRecord, ...]:
+        records: list[PackageInclusionRecord] = []
+        for item in items or ():
+            if isinstance(item, PackageInclusionRecord):
+                records.append(item)
+                continue
+
+            if isinstance(item, PackageInclusionData):
+                records.append(
+                    PackageInclusionRecord(
+                        id=self._next_inclusion_id,
+                        name=item.name,
+                        type=item.type,
+                        display_order=item.display_order,
+                    )
+                )
+                self._next_inclusion_id += 1
+        return tuple(records)

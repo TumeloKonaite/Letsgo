@@ -244,6 +244,7 @@ def test_public_package_urls_are_normalized_for_storage_images() -> None:
             is_featured=False,
             images=(storage_image,),
             itinerary=(),
+            inclusions=(),
             availability=(),
         ),
     )
@@ -301,6 +302,7 @@ def test_public_package_urls_fall_back_to_stored_url_when_storage_is_unavailable
             is_featured=False,
             images=(storage_image,),
             itinerary=(),
+            inclusions=(),
             availability=(),
         ),
     )
@@ -314,3 +316,44 @@ def test_public_package_urls_fall_back_to_stored_url_when_storage_is_unavailable
     assert list_payload[0].hero_image_url == storage_image.image_url
     assert detail_payload.hero_image_url == storage_image.image_url
     assert detail_payload.images[0].image_url == storage_image.image_url
+
+
+def test_update_package_successfully_replaces_nested_content() -> None:
+    service = _build_service()
+
+    package = service.update_package(
+        1,
+        PackageUpdate(
+            itinerary=[
+                {
+                    "title": "Mandela House",
+                    "description": "Explore the museum stop.",
+                    "duration": "30 minutes",
+                    "display_order": 0,
+                }
+            ],
+            inclusions=[
+                {
+                    "name": "Bottled water",
+                    "type": "included",
+                    "display_order": 0,
+                },
+                {
+                    "name": "Lunch",
+                    "type": "excluded",
+                    "display_order": 0,
+                },
+            ],
+        ),
+    )
+
+    assert len(package.itinerary) == 1
+    assert package.itinerary[0].title == "Mandela House"
+    assert package.itinerary[0].duration == "30 minutes"
+    assert package.itinerary[0].display_order == 0
+    assert [
+        (item.name, item.type, item.display_order) for item in package.inclusions
+    ] == [
+        ("Bottled water", "included", 0),
+        ("Lunch", "excluded", 0),
+    ]

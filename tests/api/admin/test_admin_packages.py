@@ -75,6 +75,26 @@ def test_create_package_success(admin_packages_client: AdminPackagesClient) -> N
             "duration_nights": 4,
             "price_from": "6200.00",
             "currency": "ZAR",
+            "itinerary": [
+                {
+                    "title": "Knysna Waterfront",
+                    "description": "Start with the lagoon and waterfront.",
+                    "duration": "45 minutes",
+                    "display_order": 0,
+                }
+            ],
+            "inclusions": [
+                {
+                    "name": "Bottled water",
+                    "type": "included",
+                    "display_order": 0,
+                },
+                {
+                    "name": "Lunch",
+                    "type": "excluded",
+                    "display_order": 0,
+                },
+            ],
             "is_active": True,
             "status": "draft",
             "is_published": False,
@@ -85,6 +105,8 @@ def test_create_package_success(admin_packages_client: AdminPackagesClient) -> N
 
     assert response.status_code == 201
     assert response.json()["slug"] == "garden-route-escape"
+    assert response.json()["itinerary"][0]["title"] == "Knysna Waterfront"
+    assert response.json()["inclusions"][0]["name"] == "Lunch"
 
 
 def test_create_package_duplicate_slug_fails(
@@ -124,6 +146,8 @@ def test_get_package_success(admin_packages_client: AdminPackagesClient) -> None
     assert response.status_code == 200
     assert response.json()["id"] == admin_packages_client.package_id
     assert response.json()["slug"] == "existing-package"
+    assert response.json()["itinerary"] == []
+    assert response.json()["inclusions"] == []
 
 
 def test_get_missing_package_fails(admin_packages_client: AdminPackagesClient) -> None:
@@ -144,6 +168,21 @@ def test_update_package_success(admin_packages_client: AdminPackagesClient) -> N
             "title": "Updated Existing Package",
             "destination": "Johannesburg",
             "price_from": "4999.00",
+            "itinerary": [
+                {
+                    "title": "Vilakazi Street",
+                    "description": "Walk the historic street.",
+                    "duration": "30 minutes",
+                    "display_order": 0,
+                }
+            ],
+            "inclusions": [
+                {
+                    "name": "Guide",
+                    "type": "included",
+                    "display_order": 0,
+                }
+            ],
         },
     )
 
@@ -151,6 +190,8 @@ def test_update_package_success(admin_packages_client: AdminPackagesClient) -> N
     assert response.json()["title"] == "Updated Existing Package"
     assert response.json()["destination"] == "Johannesburg"
     assert response.json()["price_from"] == "4999.00"
+    assert response.json()["itinerary"][0]["duration"] == "30 minutes"
+    assert response.json()["inclusions"][0]["name"] == "Guide"
 
 
 def test_update_missing_package_fails(

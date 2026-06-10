@@ -10,6 +10,7 @@ REQUIRED_TABLES = frozenset(
         "packages",
         "package_images",
         "package_itinerary_items",
+        "package_inclusions",
         "package_availability",
         "bookings",
         "contact_submissions",
@@ -40,6 +41,7 @@ def initialize_database(engine: Engine) -> None:
     if engine.dialect.name == "sqlite":
         Base.metadata.create_all(engine)
         _ensure_package_image_storage_key_column(engine)
+        _ensure_package_itinerary_columns(engine)
         _migrate_legacy_package_statuses(engine)
         _migrate_legacy_booking_statuses(engine)
         return
@@ -100,6 +102,61 @@ def _migrate_legacy_booking_statuses(engine: Engine) -> None:
         connection.execute(
             text("UPDATE bookings SET status = 'closed' WHERE status = 'rejected'")
         )
+
+
+def _ensure_package_itinerary_columns(engine: Engine) -> None:
+    inspector = inspect(engine)
+    if "package_itinerary_items" not in inspector.get_table_names():
+        return
+
+    existing_columns = {
+        column["name"] for column in inspector.get_columns("package_itinerary_items")
+    }
+
+    with engine.begin() as connection:
+        if "duration" not in existing_columns:
+            connection.execute(
+                text(
+                    "ALTER TABLE package_itinerary_items ADD COLUMN duration VARCHAR(100)"
+                )
+            )
+        if "updated_at" not in existing_columns:
+            connection.execute(
+                text(
+                    "ALTER TABLE package_itinerary_items ADD COLUMN updated_at DATETIME"
+                )
+            )
+            connection.execute(
+                text(
+                    """
+                    UPDATE package_itinerary_items
+                    SET updated_at = COALESCE(created_at, CURRENT_TIMESTAMP)
+                    WHERE updated_at IS NULL
+                    """
+                )
+            )
+        if {"day_number", "sort_order"}.issubset(existing_columns):
+            connection.execute(
+                text(
+                    """
+                    WITH ordered AS (
+                        SELECT
+                            id,
+                            ROW_NUMBER() OVER (
+                                PARTITION BY package_id
+                                ORDER BY day_number ASC, sort_order ASC, id ASC
+                            ) - 1 AS next_sort_order
+                        FROM package_itinerary_items
+                    )
+                    UPDATE package_itinerary_items
+                    SET sort_order = (
+                        SELECT next_sort_order
+                        FROM ordered
+                        WHERE ordered.id = package_itinerary_items.id
+                    )
+                    """
+                )
+            )
 
 
 def _migrate_legacy_package_statuses(engine: Engine) -> None:

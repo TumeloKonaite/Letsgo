@@ -16,6 +16,8 @@ from app.infrastructure.database.models import (
     PackageAvailability,
     PackageAvailabilityStatus,
     PackageImage,
+    PackageInclusion,
+    PackageInclusionType,
     PackageItineraryItem,
     PackagePublicationStatus,
 )
@@ -34,6 +36,7 @@ def test_models_are_importable_and_registered() -> None:
         "packages",
         "package_images",
         "package_itinerary_items",
+        "package_inclusions",
         "package_availability",
         "bookings",
         "contact_submissions",
@@ -59,9 +62,14 @@ def test_package_relationships_are_wired_correctly() -> None:
     )
     itinerary = PackageItineraryItem(
         day_number=1,
-        sort_order=0,
+        display_order=0,
         title="Arrival",
         description="Airport pickup and hotel check-in.",
+    )
+    inclusion = PackageInclusion(
+        name="Airport transfer",
+        type=PackageInclusionType.INCLUDED,
+        display_order=0,
     )
     availability = PackageAvailability(
         start_date=date(2026, 9, 1),
@@ -73,18 +81,22 @@ def test_package_relationships_are_wired_correctly() -> None:
 
     package.images.append(image)
     package.itinerary_items.append(itinerary)
+    package.inclusions.append(inclusion)
     package.availability_dates.append(availability)
 
     assert image.package is package
     assert itinerary.package is package
+    assert inclusion.package is package
     assert availability.package is package
     assert package.images == [image]
     assert package.itinerary_items == [itinerary]
+    assert package.inclusions == [inclusion]
     assert package.availability_dates == [availability]
 
     relationships = sa_inspect(Package).relationships
     assert relationships["images"].mapper.class_ is PackageImage
     assert relationships["itinerary_items"].mapper.class_ is PackageItineraryItem
+    assert relationships["inclusions"].mapper.class_ is PackageInclusion
     assert relationships["availability_dates"].mapper.class_ is PackageAvailability
 
 
@@ -150,9 +162,15 @@ def test_package_constraints_cover_public_display_ordering() -> None:
         for constraint in PackageItineraryItem.__table__.constraints
         if isinstance(constraint, CheckConstraint)
     }
+    inclusion_constraints = {
+        str(constraint.sqltext)
+        for constraint in PackageInclusion.__table__.constraints
+        if isinstance(constraint, CheckConstraint)
+    }
 
     assert "display_order >= 0" in constraints
     assert "sort_order >= 0" in itinerary_constraints
+    assert "display_order >= 0" in inclusion_constraints
 
 
 def test_create_database_engine_supports_postgresql_psycopg_urls() -> None:
@@ -254,6 +272,41 @@ def test_initialize_database_adds_storage_key_column_for_existing_tables(
         }
 
         assert "storage_key" in columns
+    finally:
+        engine.dispose()
+
+
+def test_initialize_database_adds_itinerary_duration_and_updated_at_columns(
+    tmp_path,
+) -> None:
+    engine = create_engine(f"sqlite:///{tmp_path / 'legacy-itinerary.db'}")
+
+    with engine.begin() as connection:
+        connection.execute(
+            text(
+                """
+                CREATE TABLE package_itinerary_items (
+                    id INTEGER PRIMARY KEY,
+                    package_id INTEGER NOT NULL,
+                    day_number INTEGER NOT NULL,
+                    sort_order INTEGER NOT NULL DEFAULT 0,
+                    title VARCHAR(200) NOT NULL,
+                    description TEXT NOT NULL,
+                    created_at DATETIME
+                )
+                """
+            )
+        )
+
+    try:
+        initialize_database(engine)
+
+        columns = {
+            column["name"]
+            for column in sa_inspect(engine).get_columns("package_itinerary_items")
+        }
+
+        assert {"duration", "updated_at"}.issubset(columns)
     finally:
         engine.dispose()
 

@@ -11,6 +11,7 @@ from app.infrastructure.database.models import (
     PackageAvailability,
     PackageAvailabilityStatus,
     PackageImage,
+    PackageInclusion,
     PackageItineraryItem,
     PackagePublicationStatus,
 )
@@ -54,21 +55,43 @@ def seed_packages(session_factory) -> None:
             [
                 PackageItineraryItem(
                     day_number=2,
-                    sort_order=1,
+                    display_order=1,
                     title="Peninsula tour",
                     description="Chapman's Peak and Cape Point.",
+                    duration="Half day",
                 ),
                 PackageItineraryItem(
                     day_number=1,
-                    sort_order=2,
+                    display_order=2,
                     title="Hotel check-in",
                     description="Arrival and waterfront evening.",
+                    duration="45 minutes",
                 ),
                 PackageItineraryItem(
                     day_number=1,
-                    sort_order=1,
+                    display_order=1,
                     title="Airport pickup",
                     description="Meet and transfer from the airport.",
+                    duration="30 minutes",
+                ),
+            ]
+        )
+        featured_package.inclusions.extend(
+            [
+                PackageInclusion(
+                    name="Airport transfers",
+                    type="included",
+                    display_order=0,
+                ),
+                PackageInclusion(
+                    name="Breakfast daily",
+                    type="included",
+                    display_order=1,
+                ),
+                PackageInclusion(
+                    name="Flights",
+                    type="excluded",
+                    display_order=0,
                 ),
             ]
         )
@@ -209,11 +232,28 @@ def test_itinerary_items_are_ordered_correctly(package_client: TestClient) -> No
     itinerary = response.json()["itinerary"]
 
     assert [
-        (item["day_number"], item["sort_order"], item["title"]) for item in itinerary
+        (item["title"], item["duration"], item["display_order"]) for item in itinerary
     ] == [
-        (1, 1, "Airport pickup"),
-        (1, 2, "Hotel check-in"),
-        (2, 1, "Peninsula tour"),
+        ("Airport pickup", "30 minutes", 1),
+        ("Hotel check-in", "45 minutes", 2),
+        ("Peninsula tour", "Half day", 1),
+    ]
+
+
+def test_package_detail_includes_cost_inclusions_and_exclusions(
+    package_client: TestClient,
+) -> None:
+    response = package_client.get("/api/packages/cape-town-explorer")
+
+    assert response.status_code == 200
+    inclusions = response.json()["inclusions"]
+
+    assert [
+        (item["name"], item["type"], item["display_order"]) for item in inclusions
+    ] == [
+        ("Flights", "excluded", 0),
+        ("Airport transfers", "included", 0),
+        ("Breakfast daily", "included", 1),
     ]
 
 

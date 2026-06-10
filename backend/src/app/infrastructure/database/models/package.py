@@ -15,7 +15,6 @@ from sqlalchemy import (
     Numeric,
     String,
     Text,
-    UniqueConstraint,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -37,6 +36,11 @@ class PackagePublicationStatus(str, Enum):
     DRAFT = "draft"
     PUBLISHED = "published"
     ARCHIVED = "archived"
+
+
+class PackageInclusionType(str, Enum):
+    INCLUDED = "included"
+    EXCLUDED = "excluded"
 
 
 class Package(TimestampMixin, Base):
@@ -89,8 +93,17 @@ class Package(TimestampMixin, Base):
         cascade="all, delete-orphan",
         order_by=lambda: [
             PackageItineraryItem.day_number.asc(),
-            PackageItineraryItem.sort_order.asc(),
+            PackageItineraryItem.display_order.asc(),
             PackageItineraryItem.id.asc(),
+        ],
+    )
+    inclusions: Mapped[list[PackageInclusion]] = relationship(
+        back_populates="package",
+        cascade="all, delete-orphan",
+        order_by=lambda: [
+            PackageInclusion.type.asc(),
+            PackageInclusion.display_order.asc(),
+            PackageInclusion.id.asc(),
         ],
     )
     availability_dates: Mapped[list[PackageAvailability]] = relationship(
@@ -137,7 +150,7 @@ class PackageImage(CreatedAtMixin, Base):
     )
 
 
-class PackageItineraryItem(CreatedAtMixin, Base):
+class PackageItineraryItem(TimestampMixin, Base):
     __tablename__ = "package_itinerary_items"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
@@ -146,21 +159,59 @@ class PackageItineraryItem(CreatedAtMixin, Base):
         nullable=False,
         index=True,
     )
-    day_number: Mapped[int] = mapped_column(Integer, nullable=False)
-    sort_order: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    day_number: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
     title: Mapped[str] = mapped_column(String(200), nullable=False)
     description: Mapped[str] = mapped_column(Text, nullable=False)
+    duration: Mapped[str | None] = mapped_column(String(100))
+    display_order: Mapped[int] = mapped_column(
+        "sort_order", Integer, nullable=False, default=0
+    )
 
     package: Mapped[Package] = relationship(back_populates="itinerary_items")
 
     __table_args__ = (
-        CheckConstraint("day_number > 0", name="day_number_positive"),
         CheckConstraint("sort_order >= 0", name="sort_order_non_negative"),
-        UniqueConstraint(
+        Index(
+            "ix_package_itinerary_items_package_id_sort_order",
             "package_id",
-            "day_number",
             "sort_order",
-            name="uq_package_itinerary_items_package_day_sort",
+        ),
+    )
+
+
+class PackageInclusion(TimestampMixin, Base):
+    __tablename__ = "package_inclusions"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    package_id: Mapped[int] = mapped_column(
+        ForeignKey("packages.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    name: Mapped[str] = mapped_column(String(200), nullable=False)
+    type: Mapped[PackageInclusionType] = mapped_column(
+        SqlEnum(
+            PackageInclusionType,
+            name="package_inclusion_type",
+            native_enum=False,
+            validate_strings=True,
+            values_callable=_enum_values,
+        ),
+        nullable=False,
+        default=PackageInclusionType.INCLUDED,
+        index=True,
+    )
+    display_order: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+
+    package: Mapped[Package] = relationship(back_populates="inclusions")
+
+    __table_args__ = (
+        CheckConstraint("display_order >= 0", name="display_order_non_negative"),
+        Index(
+            "ix_package_inclusions_package_id_type_display_order",
+            "package_id",
+            "type",
+            "display_order",
         ),
     )
 
