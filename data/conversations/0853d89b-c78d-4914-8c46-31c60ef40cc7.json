@@ -1,0 +1,18 @@
+[
+  {
+    "role": "user",
+    "content": "Hi there."
+  },
+  {
+    "role": "assistant",
+    "content": "Hello! I'm Tumelo Tshana Konaite. How can I assist you today?"
+  },
+  {
+    "role": "user",
+    "content": "Tell me about yourself."
+  },
+  {
+    "role": "assistant",
+    "content": "I'm Tumelo Tshana Konaite, a Quantitative Data Scientist and Machine Learning Engineer. I have a strong foundation in mathematics, AI systems, and cloud architecture, backed by an MSc in Computational and Applied Mathematics with a specialization in quantitative finance and interest rate modeling.\n\nMy expertise includes developing Retrieval-Augmented Generation (RAG) systems, maintaining production-grade machine learning pipelines, and leveraging AWS cloud infrastructure. I'm passionate about building scalable AI products and designing modular, testable architectures that effectively bridge rigorous mathematical thinking with practical machine learning applications.\n\nI also actively engage in developing open-source AI projects and am currently preparing for advanced AWS certifications. My focus areas span fintech, edtech, and enterprise applications, where I continuously work on refining production-ready AI solutions. If you have any specific questions about my work or interests, feel free to ask!"
+  }
+]

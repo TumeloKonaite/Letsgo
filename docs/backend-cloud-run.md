@@ -61,6 +61,18 @@ Store secrets in Secret Manager and attach them to the Cloud Run service, not to
 LETSGOSA_DATABASE_URL=postgresql+psycopg://letsgodev:<DB_PASSWORD>@/letsgo?host=/cloudsql/letsgodb:us-central1:free-trial-first-project
 ```
 
+The contact submission pipeline also needs SMTP runtime configuration. The backend reads these environment variable names:
+
+```env
+SMTP_HOST
+SMTP_PORT
+SMTP_USERNAME
+SMTP_PASSWORD
+SMTP_FROM_EMAIL
+CONTACT_TO_EMAIL
+SMTP_USE_TLS
+```
+
 ## One-time GCP setup
 
 Enable the required APIs:
@@ -115,6 +127,93 @@ Attach the secret to Cloud Run:
   --update-secrets LETSGOSA_DATABASE_URL=letsgosa-database-url:latest
 ```
 
+Create the SMTP secrets used by the contact form. Example values for Gmail SMTP:
+
+```powershell
+$env:SMTP_HOST="smtp.gmail.com"
+$env:SMTP_PORT="587"
+$env:SMTP_USERNAME="your-account@gmail.com"
+$env:SMTP_PASSWORD="your-app-password"
+$env:SMTP_FROM_EMAIL="your-account@gmail.com"
+$env:CONTACT_TO_EMAIL="hedoneafrika@gmail.com"
+$env:SMTP_USE_TLS="true"
+
+$env:SMTP_HOST | & 'C:\Users\l\AppData\Local\Google\Cloud SDK\google-cloud-sdk\bin\gcloud.cmd' secrets create SMTP_HOST `
+  --project letsgodb `
+  --data-file=-
+$env:SMTP_PORT | & 'C:\Users\l\AppData\Local\Google\Cloud SDK\google-cloud-sdk\bin\gcloud.cmd' secrets create SMTP_PORT `
+  --project letsgodb `
+  --data-file=-
+$env:SMTP_USERNAME | & 'C:\Users\l\AppData\Local\Google\Cloud SDK\google-cloud-sdk\bin\gcloud.cmd' secrets create SMTP_USERNAME `
+  --project letsgodb `
+  --data-file=-
+$env:SMTP_PASSWORD | & 'C:\Users\l\AppData\Local\Google\Cloud SDK\google-cloud-sdk\bin\gcloud.cmd' secrets create SMTP_PASSWORD `
+  --project letsgodb `
+  --data-file=-
+$env:SMTP_FROM_EMAIL | & 'C:\Users\l\AppData\Local\Google\Cloud SDK\google-cloud-sdk\bin\gcloud.cmd' secrets create SMTP_FROM_EMAIL `
+  --project letsgodb `
+  --data-file=-
+$env:CONTACT_TO_EMAIL | & 'C:\Users\l\AppData\Local\Google\Cloud SDK\google-cloud-sdk\bin\gcloud.cmd' secrets create CONTACT_TO_EMAIL `
+  --project letsgodb `
+  --data-file=-
+$env:SMTP_USE_TLS | & 'C:\Users\l\AppData\Local\Google\Cloud SDK\google-cloud-sdk\bin\gcloud.cmd' secrets create SMTP_USE_TLS `
+  --project letsgodb `
+  --data-file=-
+```
+
+If those secrets already exist, add a new version instead:
+
+```powershell
+$env:SMTP_HOST | & 'C:\Users\l\AppData\Local\Google\Cloud SDK\google-cloud-sdk\bin\gcloud.cmd' secrets versions add SMTP_HOST `
+  --project letsgodb `
+  --data-file=-
+$env:SMTP_PORT | & 'C:\Users\l\AppData\Local\Google\Cloud SDK\google-cloud-sdk\bin\gcloud.cmd' secrets versions add SMTP_PORT `
+  --project letsgodb `
+  --data-file=-
+$env:SMTP_USERNAME | & 'C:\Users\l\AppData\Local\Google\Cloud SDK\google-cloud-sdk\bin\gcloud.cmd' secrets versions add SMTP_USERNAME `
+  --project letsgodb `
+  --data-file=-
+$env:SMTP_PASSWORD | & 'C:\Users\l\AppData\Local\Google\Cloud SDK\google-cloud-sdk\bin\gcloud.cmd' secrets versions add SMTP_PASSWORD `
+  --project letsgodb `
+  --data-file=-
+$env:SMTP_FROM_EMAIL | & 'C:\Users\l\AppData\Local\Google\Cloud SDK\google-cloud-sdk\bin\gcloud.cmd' secrets versions add SMTP_FROM_EMAIL `
+  --project letsgodb `
+  --data-file=-
+$env:CONTACT_TO_EMAIL | & 'C:\Users\l\AppData\Local\Google\Cloud SDK\google-cloud-sdk\bin\gcloud.cmd' secrets versions add CONTACT_TO_EMAIL `
+  --project letsgodb `
+  --data-file=-
+$env:SMTP_USE_TLS | & 'C:\Users\l\AppData\Local\Google\Cloud SDK\google-cloud-sdk\bin\gcloud.cmd' secrets versions add SMTP_USE_TLS `
+  --project letsgodb `
+  --data-file=-
+```
+
+Attach the SMTP secrets to Cloud Run:
+
+```powershell
+& 'C:\Users\l\AppData\Local\Google\Cloud SDK\google-cloud-sdk\bin\gcloud.cmd' run services update letsgosa-backend `
+  --region us-central1 `
+  --project letsgodb `
+  --update-secrets SMTP_HOST=SMTP_HOST:latest,SMTP_PORT=SMTP_PORT:latest,SMTP_USERNAME=SMTP_USERNAME:latest,SMTP_PASSWORD=SMTP_PASSWORD:latest,SMTP_FROM_EMAIL=SMTP_FROM_EMAIL:latest,CONTACT_TO_EMAIL=CONTACT_TO_EMAIL:latest,SMTP_USE_TLS=SMTP_USE_TLS:latest
+```
+
+If the service already has SMTP variables configured as plain environment values, remove them first:
+
+```powershell
+& 'C:\Users\l\AppData\Local\Google\Cloud SDK\google-cloud-sdk\bin\gcloud.cmd' run services update letsgosa-backend `
+  --region us-central1 `
+  --project letsgodb `
+  --remove-env-vars SMTP_HOST,SMTP_PORT,SMTP_USERNAME,SMTP_PASSWORD,SMTP_FROM_EMAIL,CONTACT_TO_EMAIL,SMTP_USE_TLS
+```
+
+If the service still contains an old secret reference such as `your-smtp-password-secret`, remove that secret-backed environment variable first:
+
+```powershell
+& 'C:\Users\l\AppData\Local\Google\Cloud SDK\google-cloud-sdk\bin\gcloud.cmd' run services update letsgosa-backend `
+  --region us-central1 `
+  --project letsgodb `
+  --remove-secrets SMTP_PASSWORD
+```
+
 Create the deployment service account if it does not already exist:
 
 ```text
@@ -162,6 +261,7 @@ Workload Identity User
 Grant the Cloud Run runtime service account at least:
 
 - `roles/secretmanager.secretAccessor` for `letsgosa-database-url`
+- `roles/secretmanager.secretAccessor` for the SMTP secrets attached to the service
 - `roles/storage.objectAdmin` for `gs://letsgosa-package-images`
 - `roles/cloudsql.client` if the service connects through Cloud SQL
 
@@ -202,5 +302,38 @@ Verify public package routes:
 ```powershell
 Invoke-WebRequest "$serviceUrl/api/packages"
 ```
+
+Verify the contact route is registered in OpenAPI:
+
+```powershell
+Invoke-WebRequest "$serviceUrl/openapi.json"
+```
+
+Test a contact submission:
+
+```powershell
+Invoke-WebRequest `
+  -Uri "$serviceUrl/api/contact" `
+  -Method POST `
+  -ContentType "application/json" `
+  -Body '{"first_name":"Jane","last_name":"Doe","email":"jane@example.com","phone":"+27 82 123 4567","subject":"Testing contact flow","message":"This is a production contact flow verification."}'
+```
+
+If the contact route returns `500`, check Cloud Run logs for SMTP failures:
+
+```powershell
+& 'C:\Users\l\AppData\Local\Google\Cloud SDK\google-cloud-sdk\bin\gcloud.cmd' logging read `
+  "resource.type=cloud_run_revision AND resource.labels.service_name=letsgosa-backend" `
+  --project letsgodb `
+  --limit 50 `
+  --format json
+```
+
+Common causes are:
+
+- `SMTP_PORT` secret is not a number such as `587`
+- `SMTP_USE_TLS` is not `true` or `false`
+- `SMTP_FROM_EMAIL` does not match the authenticated SMTP account
+- the SMTP provider requires an app password instead of the normal account password
 
 If you need to apply schema changes outside GitHub Actions, run `alembic upgrade head` against the production database before deploying or shifting traffic.
