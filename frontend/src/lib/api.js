@@ -22,3 +22,15 @@ export function submitContactRequest(payload) {
     "Unable to send contact request."
   );
 }
+
+export function submitChatMessage(payload, options = {}) {
+  return request(
+    "/chat",
+    {
+      method: "POST",
+      body: JSON.stringify(payload),
+      ...options,
+    },
+    "Unable to reach the travel assistant."
+  );
+}
