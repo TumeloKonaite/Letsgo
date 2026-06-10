@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -11,6 +12,10 @@ from app.chatbot.service import TwinService
 from app.core.dependencies import get_twin_service
 
 router = APIRouter(prefix="/chat", tags=["chat"])
+logger = logging.getLogger(__name__)
+
+CHAT_UNAVAILABLE_DETAIL = "Chat service is unavailable."
+CHAT_FAILURE_DETAIL = "Chat request failed."
 
 
 @router.post("", response_model=ChatResponse)
@@ -22,9 +27,10 @@ async def chat(
         result = twin_service.chat(request.message, request.session_id)
         return ChatResponse(response=result.response, session_id=result.session_id)
     except LLMConfigurationError as exc:
-        raise HTTPException(status_code=503, detail=str(exc)) from exc
+        raise HTTPException(status_code=503, detail=CHAT_UNAVAILABLE_DETAIL) from exc
     except Exception as exc:
-        raise HTTPException(status_code=500, detail=str(exc)) from exc
+        logger.exception("Chat request failed.")
+        raise HTTPException(status_code=500, detail=CHAT_FAILURE_DETAIL) from exc
 
 
 @router.post("/stream")
@@ -35,9 +41,10 @@ async def chat_stream(
     try:
         result = twin_service.stream_chat(request.message, request.session_id)
     except LLMConfigurationError as exc:
-        raise HTTPException(status_code=503, detail=str(exc)) from exc
+        raise HTTPException(status_code=503, detail=CHAT_UNAVAILABLE_DETAIL) from exc
     except Exception as exc:
-        raise HTTPException(status_code=500, detail=str(exc)) from exc
+        logger.exception("Streaming chat request failed.")
+        raise HTTPException(status_code=500, detail=CHAT_FAILURE_DETAIL) from exc
 
     return StreamingResponse(
         result.stream,

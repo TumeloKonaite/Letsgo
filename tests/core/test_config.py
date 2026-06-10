@@ -64,6 +64,21 @@ def test_settings_parse_cors_origins_from_comma_separated_env(monkeypatch) -> No
     )
 
 
+def test_settings_support_cors_origins_alias(monkeypatch) -> None:
+    monkeypatch.delenv("LETSGOSA_CORS_ALLOW_ORIGINS", raising=False)
+    monkeypatch.setenv(
+        "CORS_ORIGINS",
+        "https://letsgodb.web.app, https://letsgodb.firebaseapp.com",
+    )
+
+    settings = config.Settings.from_env()
+
+    assert settings.cors_allow_origins == (
+        "https://letsgodb.web.app",
+        "https://letsgodb.firebaseapp.com",
+    )
+
+
 def test_default_cors_origins_include_firebase_hosting_domains() -> None:
     assert "https://letsgodb.web.app" in config.DEFAULT_CORS_ALLOW_ORIGINS
     assert "https://letsgodb.firebaseapp.com" in config.DEFAULT_CORS_ALLOW_ORIGINS

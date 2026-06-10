@@ -15,7 +15,7 @@ The API is served at `http://localhost:8000`, public package routes are availabl
 
 SQLite remains the default local fallback when `LETSGOSA_DATABASE_URL` is not set. Production must use PostgreSQL through `LETSGOSA_DATABASE_URL`; see [docs/production-database.md](/c:/Users/l/Documents/letsgosa/docs/production-database.md).
 Package images are stored in Google Cloud Storage and the backend expects `GCP_PROJECT_ID`, `GCS_BUCKET_NAME`, and `GCS_PUBLIC_BASE_URL` to be configured.
-For the Cloud Run deployment flow used in PR 19, see [docs/backend-cloud-run.md](/c:/Users/l/Documents/letsgosa/docs/backend-cloud-run.md).
+For the Cloud Run deployment flow used in PR 19, including `POST /chat` on the same backend service, see [docs/backend-cloud-run.md](/c:/Users/l/Documents/letsgosa/docs/backend-cloud-run.md).
 
 ## Managed PostgreSQL
 
@@ -114,7 +114,7 @@ GitHub Actions workflow [deploy-frontend.yml](/c:/Users/l/Documents/letsgosa/.gi
 ## Notes
 
 - The backend now allows cross-origin requests from `http://localhost:5173` and `http://127.0.0.1:5173` by default.
-- The backend production example also includes `https://letsgodb.web.app` and `https://letsgodb.firebaseapp.com` in `LETSGOSA_CORS_ALLOW_ORIGINS` so the hosted frontend can call Cloud Run.
-- Change `LETSGOSA_CORS_ALLOW_ORIGINS` in the root `.env` if you need different frontend origins.
+- The backend production example includes `https://letsgodb.web.app` and `https://letsgodb.firebaseapp.com` in `CORS_ORIGINS` so the hosted frontend can call Cloud Run.
+- `LETSGOSA_CORS_ALLOW_ORIGINS` remains supported as a legacy alias, but `CORS_ORIGINS` is now the preferred variable.
 - Run database migrations with `uv run alembic upgrade head` before starting a non-SQLite environment.
 - Production should keep the database password in a secret store, not in `.env.example`, the repo, or Cloud Run command history.

@@ -6,6 +6,8 @@ from openai import APITimeoutError, OpenAI
 
 from app.core.config import Settings
 
+LLM_UNAVAILABLE_MESSAGE = "Chat service is unavailable."
+
 
 class LLMConfigurationError(RuntimeError):
     """Raised when the LLM integration is requested without valid configuration."""
@@ -18,7 +20,7 @@ class OpenAIClient:
         client: OpenAI | None = None,
     ) -> None:
         if not settings.openai_api_key:
-            raise LLMConfigurationError("OPENAI_API_KEY is not configured.")
+            raise LLMConfigurationError(LLM_UNAVAILABLE_MESSAGE)
         self._model = settings.openai_model
         self._client = client or OpenAI(
             api_key=settings.openai_api_key,
@@ -56,7 +58,7 @@ class OpenAIClient:
 
 
 class UnavailableLLMClient:
-    def __init__(self, message: str = "OPENAI_API_KEY is not configured.") -> None:
+    def __init__(self, message: str = LLM_UNAVAILABLE_MESSAGE) -> None:
         self._message = message
 
     def complete(self, messages: list[dict[str, str]]) -> str:

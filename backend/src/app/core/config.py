@@ -199,7 +199,8 @@ class Settings:
                 DEFAULT_CHATBOT_CONVERSATION_STORAGE_DIR,
             ),
             cors_allow_origins=_as_csv(
-                os.getenv("LETSGOSA_CORS_ALLOW_ORIGINS"),
+                os.getenv("CORS_ORIGINS")
+                or os.getenv("LETSGOSA_CORS_ALLOW_ORIGINS"),
                 default=DEFAULT_CORS_ALLOW_ORIGINS,
             ),
         )

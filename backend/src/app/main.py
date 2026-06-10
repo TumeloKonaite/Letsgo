@@ -7,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.auth.firebase_auth import FirebaseAuthService
 from app.api.router import api_router
+from app.api.routes.chat import router as chat_router
 from app.chatbot.conversation_store import FileConversationStore
 from app.chatbot.facts_loader import FactsLoader
 from app.chatbot.llm import OpenAIClient, UnavailableLLMClient
@@ -129,6 +130,7 @@ def create_application(settings: Settings | None = None) -> FastAPI:
             allow_headers=["*"],
         )
     application.include_router(health_router)
+    application.include_router(chat_router)
     application.include_router(api_router)
     return application
 

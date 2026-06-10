@@ -10,6 +10,12 @@ COPY backend/requirements.txt ./requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY backend ./backend
+RUN mkdir -p /app/data
+COPY data/fallback_personality.txt ./data/fallback_personality.txt
+COPY data/linkedin.pdf ./data/linkedin.pdf
+COPY data/style.txt ./data/style.txt
+COPY data/summary.txt ./data/summary.txt
+COPY data/twin_profile.json ./data/twin_profile.json
 
 EXPOSE 8080
 
