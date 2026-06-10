@@ -116,11 +116,15 @@ def _ensure_package_itinerary_columns(engine: Engine) -> None:
     with engine.begin() as connection:
         if "duration" not in existing_columns:
             connection.execute(
-                text("ALTER TABLE package_itinerary_items ADD COLUMN duration VARCHAR(100)")
+                text(
+                    "ALTER TABLE package_itinerary_items ADD COLUMN duration VARCHAR(100)"
+                )
             )
         if "updated_at" not in existing_columns:
             connection.execute(
-                text("ALTER TABLE package_itinerary_items ADD COLUMN updated_at DATETIME")
+                text(
+                    "ALTER TABLE package_itinerary_items ADD COLUMN updated_at DATETIME"
+                )
             )
             connection.execute(
                 text(

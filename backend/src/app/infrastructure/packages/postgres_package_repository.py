@@ -191,9 +191,7 @@ class PostgresPackageRepository:
             itinerary=tuple(
                 self._to_itinerary_item(item) for item in package.itinerary_items
             ),
-            inclusions=tuple(
-                self._to_inclusion(item) for item in package.inclusions
-            ),
+            inclusions=tuple(self._to_inclusion(item) for item in package.inclusions),
         )
 
     def _to_list_item(self, package: Package) -> PackageListItemRecord:
@@ -268,9 +266,7 @@ class PostgresPackageRepository:
             status=item.status.value,
         )
 
-    def _replace_itinerary_items(
-        self, package: Package, items: object
-    ) -> None:
+    def _replace_itinerary_items(self, package: Package, items: object) -> None:
         package.itinerary_items.clear()
         for item in cast(tuple[ItineraryItemData, ...], items or ()):
             package.itinerary_items.append(

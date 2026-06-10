@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Iterator
 
-from openai import APITimeoutError, OpenAI
+from openai import APITimeoutError, AuthenticationError, OpenAI
 
 from app.core.config import Settings
 
@@ -34,6 +34,8 @@ class OpenAIClient:
                 model=self._model,
                 messages=messages,
             )
+        except AuthenticationError as exc:
+            raise LLMConfigurationError(LLM_UNAVAILABLE_MESSAGE) from exc
         except APITimeoutError as exc:
             raise TimeoutError("OpenAI request timed out") from exc
         content = response.choices[0].message.content
@@ -53,6 +55,8 @@ class OpenAIClient:
                 content = getattr(delta, "content", None)
                 if content:
                     yield content
+        except AuthenticationError as exc:
+            raise LLMConfigurationError(LLM_UNAVAILABLE_MESSAGE) from exc
         except APITimeoutError as exc:
             raise TimeoutError("OpenAI request timed out") from exc
 

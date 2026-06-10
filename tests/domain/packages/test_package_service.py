@@ -351,7 +351,9 @@ def test_update_package_successfully_replaces_nested_content() -> None:
     assert package.itinerary[0].title == "Mandela House"
     assert package.itinerary[0].duration == "30 minutes"
     assert package.itinerary[0].display_order == 0
-    assert [(item.name, item.type, item.display_order) for item in package.inclusions] == [
+    assert [
+        (item.name, item.type, item.display_order) for item in package.inclusions
+    ] == [
         ("Bottled water", "included", 0),
         ("Lunch", "excluded", 0),
     ]

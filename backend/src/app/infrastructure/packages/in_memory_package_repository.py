@@ -22,22 +22,14 @@ class InMemoryPackageRepository:
         self._next_id = max(self._packages, default=0) + 1
         self._next_itinerary_id = (
             max(
-                (
-                    item.id
-                    for package in seeded_packages
-                    for item in package.itinerary
-                ),
+                (item.id for package in seeded_packages for item in package.itinerary),
                 default=0,
             )
             + 1
         )
         self._next_inclusion_id = (
             max(
-                (
-                    item.id
-                    for package in seeded_packages
-                    for item in package.inclusions
-                ),
+                (item.id for package in seeded_packages for item in package.inclusions),
                 default=0,
             )
             + 1

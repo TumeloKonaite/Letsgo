@@ -193,9 +193,7 @@ def _validate_nested_display_orders(
     if inclusions is not None:
         for inclusion_type in ("included", "excluded"):
             scoped_orders = [
-                item.display_order
-                for item in inclusions
-                if item.type == inclusion_type
+                item.display_order for item in inclusions if item.type == inclusion_type
             ]
             if len(scoped_orders) != len(set(scoped_orders)):
                 raise ValueError(

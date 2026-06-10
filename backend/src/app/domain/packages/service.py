@@ -156,8 +156,7 @@ class PackageService:
             )
         if "inclusions" in updates:
             updates["inclusions"] = tuple(
-                self._to_inclusion_data(item)
-                for item in package_data.inclusions or []
+                self._to_inclusion_data(item) for item in package_data.inclusions or []
             )
         return updates
 
@@ -200,7 +199,9 @@ class PackageService:
             display_order=package.display_order,
         )
 
-    def _to_admin_package_response(self, package: PackageRecord) -> AdminPackageResponse:
+    def _to_admin_package_response(
+        self, package: PackageRecord
+    ) -> AdminPackageResponse:
         return AdminPackageResponse(
             **self._to_package_response(package).model_dump(),
             itinerary=[self._to_itinerary_item(item) for item in package.itinerary],
