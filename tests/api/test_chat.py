@@ -68,7 +68,9 @@ def test_chat_endpoint_allows_firebase_origin_at_service_root(tmp_path: Path) ->
     assert response.headers["access-control-allow-origin"] == "https://letsgodb.web.app"
 
 
-def test_chat_returns_safe_500_without_leaking_exception_details(tmp_path: Path) -> None:
+def test_chat_returns_safe_500_without_leaking_exception_details(
+    tmp_path: Path,
+) -> None:
     data_dir = _create_chatbot_data_dir(tmp_path)
     application = create_application(
         settings=build_test_settings(
