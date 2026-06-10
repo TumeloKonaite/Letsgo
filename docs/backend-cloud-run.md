@@ -7,7 +7,7 @@ This document covers the backend production deploy path for:
 - service `letsgosa-backend`
 - Artifact Registry repository `letsgosa`
 
-The repo now deploys the backend through GitHub Actions in [.github/workflows/deploy-backend.yml](/c:/Users/l/Documents/letsgosa/.github/workflows/deploy-backend.yml). The workflow authenticates with Workload Identity Federation, reads the production database URL from Secret Manager, runs `alembic upgrade head`, builds the repo-root [Dockerfile](/c:/Users/l/Documents/letsgosa/Dockerfile), pushes the image to Artifact Registry, deploys that image to Cloud Run, and verifies `GET /health`.
+The repo now deploys the backend through GitHub Actions in [.github/workflows/deploy-backend.yml](/c:/Users/l/Documents/letsgosa/.github/workflows/deploy-backend.yml). The workflow authenticates with Workload Identity Federation, reads the production database URL from Secret Manager, runs `alembic upgrade head`, builds the repo-root [Dockerfile](/c:/Users/l/Documents/letsgosa/Dockerfile), pushes the image to Artifact Registry, deploys that image to Cloud Run, and verifies `GET /health`. This same backend service also exposes `POST /chat`.
 
 ## GitHub configuration
 
@@ -43,7 +43,10 @@ ENVIRONMENT=production
 CLOUD_SQL_CONNECTION_NAME=letsgodb:us-central1:free-trial-first-project
 GCS_BUCKET_NAME=letsgosa-package-images
 GCS_PUBLIC_BASE_URL=https://storage.googleapis.com/letsgosa-package-images
-LETSGOSA_CORS_ALLOW_ORIGINS=https://letsgodb.web.app,https://letsgodb.firebaseapp.com
+OPENAI_MODEL=gpt-4o-mini
+CONTENT_DATA_DIR=/app/data
+CONVERSATION_STORAGE_DIR=/tmp/letsgosa-chat/conversations
+CORS_ORIGINS=https://letsgodb.web.app,https://letsgodb.firebaseapp.com
 ```
 
 Example update command:
@@ -52,13 +55,19 @@ Example update command:
 & 'C:\Users\l\AppData\Local\Google\Cloud SDK\google-cloud-sdk\bin\gcloud.cmd' run services update letsgosa-backend `
   --region us-central1 `
   --project letsgodb `
-  --update-env-vars "GCP_PROJECT_ID=letsgodb,FIREBASE_PROJECT_ID=letsgodb,FIREBASE_ADMIN_ROLE=admin,ENVIRONMENT=production,CLOUD_SQL_CONNECTION_NAME=letsgodb:us-central1:free-trial-first-project,GCS_BUCKET_NAME=letsgosa-package-images,GCS_PUBLIC_BASE_URL=https://storage.googleapis.com/letsgosa-package-images,LETSGOSA_CORS_ALLOW_ORIGINS=https://letsgodb.web.app,https://letsgodb.firebaseapp.com"
+  --update-env-vars "GCP_PROJECT_ID=letsgodb,FIREBASE_PROJECT_ID=letsgodb,FIREBASE_ADMIN_ROLE=admin,ENVIRONMENT=production,CLOUD_SQL_CONNECTION_NAME=letsgodb:us-central1:free-trial-first-project,GCS_BUCKET_NAME=letsgosa-package-images,GCS_PUBLIC_BASE_URL=https://storage.googleapis.com/letsgosa-package-images,OPENAI_MODEL=gpt-4o-mini,CONTENT_DATA_DIR=/app/data,CONVERSATION_STORAGE_DIR=/tmp/letsgosa-chat/conversations,CORS_ORIGINS=https://letsgodb.web.app,https://letsgodb.firebaseapp.com"
 ```
 
 Store secrets in Secret Manager and attach them to the Cloud Run service, not to the workflow. Example secret value:
 
 ```env
 LETSGOSA_DATABASE_URL=postgresql+psycopg://letsgodev:<DB_PASSWORD>@/letsgo?host=/cloudsql/letsgodb:us-central1:free-trial-first-project
+```
+
+The chatbot route also reads:
+
+```env
+OPENAI_API_KEY
 ```
 
 The contact submission pipeline also needs SMTP runtime configuration. The backend reads these environment variable names:
@@ -125,6 +134,41 @@ Attach the secret to Cloud Run:
   --region us-central1 `
   --project letsgodb `
   --update-secrets LETSGOSA_DATABASE_URL=letsgosa-database-url:latest
+```
+
+Create the OpenAI API key secret if it does not exist:
+
+```powershell
+$env:OPENAI_API_KEY="your-openai-api-key"
+$env:OPENAI_API_KEY | & 'C:\Users\l\AppData\Local\Google\Cloud SDK\google-cloud-sdk\bin\gcloud.cmd' secrets create letsgosa-openai-api-key `
+  --project letsgodb `
+  --data-file=-
+```
+
+If the secret already exists, add a new version instead:
+
+```powershell
+$env:OPENAI_API_KEY | & 'C:\Users\l\AppData\Local\Google\Cloud SDK\google-cloud-sdk\bin\gcloud.cmd' secrets versions add letsgosa-openai-api-key `
+  --project letsgodb `
+  --data-file=-
+```
+
+Attach the OpenAI secret to Cloud Run:
+
+```powershell
+& 'C:\Users\l\AppData\Local\Google\Cloud SDK\google-cloud-sdk\bin\gcloud.cmd' run services update letsgosa-backend `
+  --region us-central1 `
+  --project letsgodb `
+  --update-secrets OPENAI_API_KEY=letsgosa-openai-api-key:latest
+```
+
+If the service still contains an old plain-text `OPENAI_API_KEY` environment variable, remove it first:
+
+```powershell
+& 'C:\Users\l\AppData\Local\Google\Cloud SDK\google-cloud-sdk\bin\gcloud.cmd' run services update letsgosa-backend `
+  --region us-central1 `
+  --project letsgodb `
+  --remove-env-vars OPENAI_API_KEY
 ```
 
 Create the SMTP secrets used by the contact form. Example values for Gmail SMTP:
@@ -261,6 +305,7 @@ Workload Identity User
 Grant the Cloud Run runtime service account at least:
 
 - `roles/secretmanager.secretAccessor` for `letsgosa-database-url`
+- `roles/secretmanager.secretAccessor` for `letsgosa-openai-api-key`
 - `roles/secretmanager.secretAccessor` for the SMTP secrets attached to the service
 - `roles/storage.objectAdmin` for `gs://letsgosa-package-images`
 - `roles/cloudsql.client` if the service connects through Cloud SQL
@@ -308,6 +353,18 @@ Verify the contact route is registered in OpenAPI:
 ```powershell
 Invoke-WebRequest "$serviceUrl/openapi.json"
 ```
+
+Verify the chatbot route:
+
+```powershell
+Invoke-WebRequest `
+  -Uri "$serviceUrl/chat" `
+  -Method POST `
+  -ContentType "application/json" `
+  -Body '{"message":"Reply with the single word ready."}'
+```
+
+If `OPENAI_API_KEY` is missing, `POST /chat` should return `503 Service Unavailable` with a generic error body instead of crashing the service or exposing configuration details.
 
 Test a contact submission:
 
