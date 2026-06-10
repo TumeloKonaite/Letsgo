@@ -69,6 +69,7 @@ If you need to inspect the tables in Cloud SQL, open `Cloud SQL Studio`, connect
 ### Cloud Run workflow
 
 Use the backend deployment guide in [docs/backend-cloud-run.md](/c:/Users/l/Documents/letsgosa/docs/backend-cloud-run.md). It covers the Cloud Run service name, region, Cloud SQL attachment, secret-backed database URL, and post-deploy verification for public and admin routes.
+That guide also now documents the SMTP Secret Manager and Cloud Run setup required for the `/api/contact` pipeline.
 
 ## Frontend setup
 

@@ -7,6 +7,12 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.auth.firebase_auth import FirebaseAuthService
 from app.api.router import api_router
+from app.chatbot.conversation_store import FileConversationStore
+from app.chatbot.facts_loader import FactsLoader
+from app.chatbot.llm import OpenAIClient, UnavailableLLMClient
+from app.chatbot.prompt_builder import TwinPromptBuilder
+from app.chatbot.resource_loader import ResourceLoader
+from app.chatbot.service import TwinResourceLoaders, TwinService
 from app.api.routes.health import router as health_router
 from app.core.config import Settings, get_settings
 from app.core.firebase import initialize_firebase_app
@@ -52,6 +58,24 @@ def create_application(settings: Settings | None = None) -> FastAPI:
             use_tls=resolved_settings.smtp_use_tls,
         )
         storage_service = create_storage_service(resolved_settings)
+        facts_loader = FactsLoader(data_dir=resolved_settings.chatbot_content_data_dir)
+        content_loader = ResourceLoader(
+            data_dir=resolved_settings.chatbot_content_data_dir,
+            facts_loader=facts_loader,
+        )
+        prompt_builder = TwinPromptBuilder()
+        llm_client = (
+            OpenAIClient(settings=resolved_settings)
+            if resolved_settings.openai_api_key
+            else UnavailableLLMClient()
+        )
+        conversation_store = FileConversationStore(
+            storage_dir=resolved_settings.chatbot_conversation_storage_dir
+        )
+        resource_loaders = TwinResourceLoaders(
+            prompt_context=content_loader.build_prompt_context,
+            fallback_personality=content_loader.load_fallback_personality,
+        )
         app.state.settings = resolved_settings
         app.state.db_session_factory = session_factory
         app.state.package_repository = package_repository
@@ -68,6 +92,18 @@ def create_application(settings: Settings | None = None) -> FastAPI:
             repository=contact_repository,
         )
         app.state.storage_service = storage_service
+        app.state.chatbot_facts_loader = facts_loader
+        app.state.chatbot_content_loader = content_loader
+        app.state.chatbot_prompt_builder = prompt_builder
+        app.state.chatbot_llm_client = llm_client
+        app.state.chatbot_conversation_store = conversation_store
+        app.state.chatbot_twin_service = TwinService(
+            settings=resolved_settings,
+            llm_client=llm_client,
+            conversation_store=conversation_store,
+            resource_loaders=resource_loaders,
+            prompt_builder=prompt_builder,
+        )
         app.state.firebase_auth_service = FirebaseAuthService(
             app_factory=lambda: initialize_firebase_app(resolved_settings)
         )

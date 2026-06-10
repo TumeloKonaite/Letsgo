@@ -17,11 +17,18 @@ PRODUCTION_ENVIRONMENTS = frozenset({"prod", "production"})
 DEFAULT_FIREBASE_ADMIN_ROLE = "admin"
 DEFAULT_STORAGE_PROVIDER = "gcs"
 DEFAULT_PACKAGE_IMAGE_MAX_UPLOAD_BYTES = 5 * 1024 * 1024
+DEFAULT_OPENAI_MODEL = "gpt-4o-mini"
+DEFAULT_OPENAI_TIMEOUT_SECONDS = 30.0
+DEFAULT_OPENAI_MAX_RETRIES = 2
 DEFAULT_CORS_ALLOW_ORIGINS = (
     "http://localhost:5173",
     "http://127.0.0.1:5173",
     "https://letsgodb.web.app",
     "https://letsgodb.firebaseapp.com",
+)
+DEFAULT_CHATBOT_CONTENT_DATA_DIR = Path(__file__).resolve().parents[4] / "data"
+DEFAULT_CHATBOT_CONVERSATION_STORAGE_DIR = (
+    DEFAULT_CHATBOT_CONTENT_DATA_DIR / "conversations"
 )
 
 
@@ -71,6 +78,14 @@ def _as_csv(value: str | None, default: tuple[str, ...] = ()) -> tuple[str, ...]
     return items
 
 
+def _resolve_path(value: str | None, default: Path) -> Path:
+    raw = value.strip() if value else ""
+    path = Path(raw).expanduser() if raw else default
+    if not path.is_absolute():
+        path = (Path(__file__).resolve().parents[4] / path).resolve()
+    return path
+
+
 @dataclass(frozen=True, slots=True)
 class Settings:
     app_name: str = DEFAULT_APP_NAME
@@ -97,6 +112,12 @@ class Settings:
     gcs_bucket_name: str | None = None
     gcs_public_base_url: str | None = None
     package_image_max_upload_bytes: int = DEFAULT_PACKAGE_IMAGE_MAX_UPLOAD_BYTES
+    openai_api_key: str | None = None
+    openai_model: str = DEFAULT_OPENAI_MODEL
+    openai_timeout_seconds: float = DEFAULT_OPENAI_TIMEOUT_SECONDS
+    openai_max_retries: int = DEFAULT_OPENAI_MAX_RETRIES
+    chatbot_content_data_dir: Path = DEFAULT_CHATBOT_CONTENT_DATA_DIR
+    chatbot_conversation_storage_dir: Path = DEFAULT_CHATBOT_CONVERSATION_STORAGE_DIR
     cors_allow_origins: tuple[str, ...] = DEFAULT_CORS_ALLOW_ORIGINS
 
     @property
@@ -159,6 +180,23 @@ class Settings:
                     "PACKAGE_IMAGE_MAX_UPLOAD_BYTES",
                     str(DEFAULT_PACKAGE_IMAGE_MAX_UPLOAD_BYTES),
                 )
+            ),
+            openai_api_key=(os.getenv("OPENAI_API_KEY") or "").strip() or None,
+            openai_model=os.getenv("OPENAI_MODEL", DEFAULT_OPENAI_MODEL),
+            openai_timeout_seconds=float(
+                os.getenv("OPENAI_TIMEOUT_SECONDS")
+                or str(DEFAULT_OPENAI_TIMEOUT_SECONDS)
+            ),
+            openai_max_retries=int(
+                os.getenv("OPENAI_MAX_RETRIES") or str(DEFAULT_OPENAI_MAX_RETRIES)
+            ),
+            chatbot_content_data_dir=_resolve_path(
+                os.getenv("CONTENT_DATA_DIR"),
+                DEFAULT_CHATBOT_CONTENT_DATA_DIR,
+            ),
+            chatbot_conversation_storage_dir=_resolve_path(
+                os.getenv("CONVERSATION_STORAGE_DIR"),
+                DEFAULT_CHATBOT_CONVERSATION_STORAGE_DIR,
             ),
             cors_allow_origins=_as_csv(
                 os.getenv("LETSGOSA_CORS_ALLOW_ORIGINS"),

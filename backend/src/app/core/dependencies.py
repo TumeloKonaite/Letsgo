@@ -20,6 +20,7 @@ from app.domain.bookings.service import BookingService
 from app.domain.packages.repository import PackageRepository
 from app.domain.packages.service import PackageService
 from app.domain.packages.storage import StorageService
+from app.chatbot.service import TwinService
 from app.infrastructure.email.base import EmailSender
 from app.domain.auth.models import AuthenticatedUser
 
@@ -64,6 +65,10 @@ def get_booking_service(request: Request) -> BookingService:
 
 def get_storage_service(request: Request) -> StorageService:
     return request.app.state.storage_service
+
+
+def get_twin_service(request: Request) -> TwinService:
+    return request.app.state.chatbot_twin_service
 
 
 def get_db_session(request: Request) -> Iterator[Session]:
