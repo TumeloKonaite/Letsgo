@@ -14,7 +14,11 @@ from app.chatbot.content_paths import (
     SUMMARY_FILENAME,
     resolve_data_path,
 )
-from app.chatbot.facts_loader import FactsLoader, InvalidContentError, MissingContentError
+from app.chatbot.facts_loader import (
+    FactsLoader,
+    InvalidContentError,
+    MissingContentError,
+)
 
 LINKEDIN_NOT_AVAILABLE = "LinkedIn profile not available"
 
@@ -105,13 +109,18 @@ class ResourceLoader:
             "linkedin": resources.linkedin,
             "linkedin_heading": f"Here is the LinkedIn profile of {name}:",
             "style": resources.style,
-            "style_heading": f"Here are some notes from {name} about their communications style:",
+            "style_heading": (
+                f"Here are some notes from {name} about their communications style:"
+            ),
             "contact_links": self._contact_block(
                 email=facts.get("email"),
                 linkedin_url=facts.get("linkedin"),
                 github_url=facts.get("github"),
             ),
-            "contact_links_heading": f"Here are direct contact/profile links for {name} (share these when asked):",
+            "contact_links_heading": (
+                f"Here are direct contact/profile links for {name} "
+                "(share these when asked):"
+            ),
             "current_datetime": rendered_datetime,
         }
 
