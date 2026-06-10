@@ -1,6 +1,7 @@
 import { NavLink, Outlet, useLocation } from "react-router-dom";
 import { useEffect, useState } from "react";
 
+import { ChatWidget } from "./chat/ChatWidget";
 import { SiteFooter } from "./SiteFooter";
 
 function ScrollManager() {
@@ -79,6 +80,7 @@ export function Layout() {
 
       <Outlet />
       <SiteFooter />
+      <ChatWidget />
     </div>
   );
 }
