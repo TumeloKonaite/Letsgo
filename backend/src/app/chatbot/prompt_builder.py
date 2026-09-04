@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 
 
@@ -100,7 +100,7 @@ class TwinPromptBuilder:
 
     def _format_current_datetime(self, current_datetime: datetime | str | None) -> str:
         if current_datetime is None:
-            current_datetime = datetime.now()
+            current_datetime = datetime.now(UTC)
 
         if isinstance(current_datetime, datetime):
             rendered_datetime = current_datetime.strftime("%Y-%m-%d %H:%M:%S")

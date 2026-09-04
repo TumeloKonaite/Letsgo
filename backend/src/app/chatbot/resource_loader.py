@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -97,7 +97,7 @@ class ResourceLoader:
         resources = self.load_prompt_resources()
         facts = resources.facts
         name = facts["name"]
-        rendered_datetime = (now or datetime.now()).strftime("%Y-%m-%d %H:%M:%S")
+        rendered_datetime = (now or datetime.now(UTC)).strftime("%Y-%m-%d %H:%M:%S")
 
         return {
             "full_name": facts["full_name"],

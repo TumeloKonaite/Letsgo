@@ -9,13 +9,9 @@ def test_load_dotenv_sets_missing_environment_values(
 ) -> None:
     dotenv_path = tmp_path / ".env"
     dotenv_path.write_text(
-        "\n".join(
-            [
-                "GCP_PROJECT_ID=letsgodb",
-                "FIREBASE_PROJECT_ID=letsgodb",
-                'FIREBASE_ADMIN_ROLE="admin"',
-            ]
-        ),
+        "GCP_PROJECT_ID=letsgodb\n"
+        "FIREBASE_PROJECT_ID=letsgodb\n"
+        'FIREBASE_ADMIN_ROLE="admin"',
         encoding="utf-8",
     )
 
