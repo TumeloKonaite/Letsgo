@@ -2,6 +2,8 @@
 
 Status: dependency definition for a clean deployment. This document does not provision or deploy infrastructure.
 
+The authoritative development/staging/production key inventory, ownership model, endpoint allowlists, setup sequence, and rotation runbook are in [environment-secrets.md](environment-secrets.md). If the shorter configuration summary below conflicts with that matrix, `environment-secrets.md` wins.
+
 ## Scope and decisions
 
 - Build a new Modal + Vercel + Clerk + Azure Database for PostgreSQL deployment. Do not reproduce the legacy Cloud Run, Firebase Hosting/Auth, or Cloud SQL configuration.
