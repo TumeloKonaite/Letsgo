@@ -274,7 +274,7 @@ class Settings:
         return self.normalized_environment in DEPLOYED_ENVIRONMENTS
 
     @classmethod
-    def from_env(cls) -> "Settings":
+    def from_env(cls) -> Settings:
         """Build typed settings from canonical environment variables."""
         _load_dotenv()
         environment = _optional_env("LETSGOSA_ENV") or ""

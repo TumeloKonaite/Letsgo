@@ -5,8 +5,8 @@ from io import BytesIO
 from urllib.parse import quote, unquote, urlparse
 
 from google.api_core.exceptions import Forbidden, GoogleAPIError, NotFound, Unauthorized
-from google.oauth2 import service_account
 from google.cloud.storage import Bucket, Client
+from google.oauth2 import service_account
 
 from app.core.config import Settings
 from app.domain.packages.storage import (
