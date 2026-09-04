@@ -1,27 +1,21 @@
-const DEFAULT_API_BASE_URL = import.meta.env.PROD
-  ? "https://letsgosa-backend-458140268449.us-central1.run.app"
-  : "http://localhost:8000";
+import { resolveFrontendEnvironment } from "../../config/environment";
 
-const legacyBaseUrl = import.meta.env.DEV
-  ? import.meta.env.VITE_LETSGO_API_BASE_URL?.trim()
-  : "";
-
-const configuredBaseUrl =
-  import.meta.env.VITE_API_BASE_URL?.trim() ||
-  legacyBaseUrl ||
-  DEFAULT_API_BASE_URL;
-
-export const apiBaseUrl = configuredBaseUrl.replace(/\/+$/, "");
+export const apiBaseUrl = resolveFrontendEnvironment(
+  import.meta.env.MODE,
+  import.meta.env
+).apiBaseUrl;
 
 let getAccessToken = null;
 let handleUnauthorized = null;
 
 function isJsonResponse(response) {
+  // Check whether the response body can be safely decoded as JSON.
   const contentType = response.headers.get("content-type") || "";
   return contentType.includes("application/json");
 }
 
 async function parseResponsePayload(response) {
+  // Normalize JSON, text, and empty responses for all API callers.
   if (response.status === 204) {
     return null;
   }
@@ -35,6 +29,7 @@ async function parseResponsePayload(response) {
 }
 
 function normalizeValidationErrors(detail) {
+  // Convert FastAPI validation details into one message per form field.
   if (!Array.isArray(detail)) {
     return {};
   }
@@ -54,6 +49,7 @@ function normalizeValidationErrors(detail) {
 }
 
 function buildErrorMessage(response, payload, fallbackMessage) {
+  // Prefer useful API details while keeping authentication errors consistent.
   if (response.status === 401) {
     return "Your admin session is no longer valid. Please sign in again.";
   }
@@ -76,6 +72,7 @@ function buildErrorMessage(response, payload, fallbackMessage) {
 }
 
 function buildHeaders(optionsHeaders, body, token) {
+  // Add standard headers without overriding multipart boundaries.
   const isMultipartBody =
     typeof FormData !== "undefined" && body instanceof FormData;
 
@@ -91,11 +88,13 @@ export function configureApiClient({
   getAccessToken: nextGetAccessToken = null,
   onUnauthorized: nextOnUnauthorized = null,
 } = {}) {
+  // Register the active Clerk token provider and unauthorized callback.
   getAccessToken = nextGetAccessToken;
   handleUnauthorized = nextOnUnauthorized;
 }
 
 async function executeRequest(path, options = {}, fallbackMessage = "Request failed.") {
+  // Execute one API request and convert failed responses to structured errors.
   const { requiresAuth = false, headers, body, ...requestOptions } = options;
   const accessToken = requiresAuth ? await getAccessToken?.() : null;
 
@@ -134,9 +133,11 @@ async function executeRequest(path, options = {}, fallbackMessage = "Request fai
 }
 
 export function request(path, options = {}, fallbackMessage) {
+  // Send a request to a public backend endpoint.
   return executeRequest(path, options, fallbackMessage);
 }
 
 export function authenticatedRequest(path, options = {}, fallbackMessage) {
+  // Send a request that must include the current Clerk session token.
   return executeRequest(path, { ...options, requiresAuth: true }, fallbackMessage);
 }

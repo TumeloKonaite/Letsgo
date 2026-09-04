@@ -8,7 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api.router import api_router
 from app.api.routes.chat import router as chat_router
 from app.api.routes.health import router as health_router
-from app.auth.firebase_auth import FirebaseAuthService
+from app.auth.clerk_auth import ClerkAuthService
 from app.chatbot.conversation_store import FileConversationStore
 from app.chatbot.facts_loader import FactsLoader
 from app.chatbot.llm import OpenAIClient, UnavailableLLMClient
@@ -16,7 +16,6 @@ from app.chatbot.prompt_builder import TwinPromptBuilder
 from app.chatbot.resource_loader import ResourceLoader
 from app.chatbot.service import TwinResourceLoaders, TwinService
 from app.core.config import Settings, get_settings
-from app.core.firebase import initialize_firebase_app
 from app.domain.bookings.service import BookingService
 from app.domain.contact.service import ContactService
 from app.domain.packages.service import PackageService
@@ -35,17 +34,19 @@ from app.infrastructure.storage import create_storage_service
 
 
 def create_application(settings: Settings | None = None) -> FastAPI:
+    """Validate configuration and assemble the FastAPI application."""
     resolved_settings = settings or get_settings()
-    resolved_settings.validate_database_configuration()
-    resolved_settings.validate_firebase_configuration()
-    resolved_settings.validate_storage_configuration()
+    resolved_settings.validate()
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):
+        """Create shared services at startup and release resources on shutdown."""
+        # Build the database layer first so repositories share one session factory.
         engine = create_database_engine(resolved_settings.database_url)
         session_factory = create_session_factory(engine)
         initialize_database(engine)
 
+        # Assemble external adapters and application services once per process.
         package_repository = PostgresPackageRepository(session_factory=session_factory)
         booking_repository = PostgresBookingRepository(session_factory=session_factory)
         contact_repository = build_contact_repository(session_factory=session_factory)
@@ -77,6 +78,7 @@ def create_application(settings: Settings | None = None) -> FastAPI:
             prompt_context=content_loader.build_prompt_context,
             fallback_personality=content_loader.load_fallback_personality,
         )
+        # Store dependencies on app.state for FastAPI dependency functions.
         app.state.settings = resolved_settings
         app.state.db_session_factory = session_factory
         app.state.package_repository = package_repository
@@ -105,8 +107,12 @@ def create_application(settings: Settings | None = None) -> FastAPI:
             resource_loaders=resource_loaders,
             prompt_builder=prompt_builder,
         )
-        app.state.firebase_auth_service = FirebaseAuthService(
-            app_factory=lambda: initialize_firebase_app(resolved_settings)
+        assert resolved_settings.clerk_jwt_key
+        assert resolved_settings.clerk_issuer_url
+        app.state.clerk_auth_service = ClerkAuthService(
+            jwt_key=resolved_settings.clerk_jwt_key,
+            issuer_url=resolved_settings.clerk_issuer_url,
+            authorized_parties=resolved_settings.clerk_authorized_parties,
         )
         app.state.started = True
 
@@ -115,6 +121,7 @@ def create_application(settings: Settings | None = None) -> FastAPI:
         finally:
             engine.dispose()
 
+    # Middleware and routes are registered only after configuration is valid.
     application = FastAPI(
         title=resolved_settings.app_name,
         debug=resolved_settings.debug,

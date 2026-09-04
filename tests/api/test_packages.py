@@ -16,7 +16,7 @@ from app.infrastructure.database.models import (
 from app.main import create_application
 from fastapi.testclient import TestClient
 
-from tests.api.firebase_auth_helpers import build_test_settings
+from tests.api.clerk_auth_helpers import build_test_settings
 
 
 def seed_packages(session_factory) -> None:

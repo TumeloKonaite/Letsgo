@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import os
 import sys
 from logging.config import fileConfig
 from pathlib import Path
@@ -15,7 +14,7 @@ BACKEND_SRC = PROJECT_ROOT / "backend" / "src"
 if str(BACKEND_SRC) not in sys.path:
     sys.path.insert(0, str(BACKEND_SRC))
 
-from app.core.config import DEFAULT_DATABASE_URL
+from app.core.config import Settings
 from app.infrastructure.database.models import Base
 
 config = context.config
@@ -23,15 +22,19 @@ config = context.config
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
+migration_settings = Settings.from_env()
+migration_settings.validate_environment()
+migration_settings.validate_database_configuration()
 config.set_main_option(
     "sqlalchemy.url",
-    os.getenv("LETSGOSA_DATABASE_URL", DEFAULT_DATABASE_URL),
+    migration_settings.database_url.replace("%", "%%"),
 )
 
 target_metadata = Base.metadata
 
 
 def run_migrations_offline() -> None:
+    """Generate migration SQL without opening a database connection."""
     url = config.get_main_option("sqlalchemy.url")
     context.configure(
         url=url,
@@ -46,6 +49,7 @@ def run_migrations_offline() -> None:
 
 
 def run_migrations_online() -> None:
+    """Run migrations through a live connection using the configured URL."""
     connectable = engine_from_config(
         config.get_section(config.config_ini_section, {}),
         prefix="sqlalchemy.",

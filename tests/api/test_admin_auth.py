@@ -8,13 +8,13 @@ from app.infrastructure.database.models import Package, PackageImage
 from app.main import create_application
 from fastapi.testclient import TestClient
 
-from tests.api.firebase_auth_helpers import (
+from tests.api.clerk_auth_helpers import (
     TEST_ADMIN_TOKEN,
     TEST_EDITOR_TOKEN,
     TEST_EXPIRED_TOKEN,
     bearer_headers,
     build_test_settings,
-    install_stub_firebase_auth,
+    install_stub_clerk_auth,
 )
 
 
@@ -58,14 +58,14 @@ def admin_client(tmp_path) -> SeededAdminClient:
     application = create_application(settings=build_test_settings(database_url))
 
     with TestClient(application) as client:
-        install_stub_firebase_auth(application)
+        install_stub_clerk_auth(application)
         package_id, image_id = _seed_existing_package(
             application.state.db_session_factory
         )
         yield SeededAdminClient(client=client, package_id=package_id, image_id=image_id)
 
 
-def test_valid_firebase_token_is_accepted(admin_client: SeededAdminClient) -> None:
+def test_valid_clerk_token_is_accepted(admin_client: SeededAdminClient) -> None:
     response = admin_client.client.get(
         "/api/admin/auth/me",
         headers=bearer_headers(TEST_ADMIN_TOKEN),
@@ -263,15 +263,15 @@ def test_user_without_admin_claim_receives_403(admin_client: SeededAdminClient) 
     assert response.json() == {"detail": "Admin claim required"}
 
 
-def test_application_fails_fast_when_firebase_configuration_is_missing(
+def test_application_fails_fast_when_clerk_configuration_is_missing(
     tmp_path,
 ) -> None:
-    database_url = f"sqlite:///{tmp_path / 'missing-firebase.db'}"
+    database_url = f"sqlite:///{tmp_path / 'missing-clerk.db'}"
 
     with pytest.raises(
         ValueError,
-        match="Missing required Firebase configuration: FIREBASE_PROJECT_ID",
+        match="Missing required Clerk configuration: CLERK_SECRET_KEY",
     ):
         create_application(
-            settings=build_test_settings(database_url, firebase_project_id=None)
+            settings=build_test_settings(database_url, clerk_secret_key=None)
         )

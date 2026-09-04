@@ -6,7 +6,7 @@ import pytest
 from app.api.routes.admin.auth import router as admin_auth_router
 from app.api.routes.admin.packages import router as admin_packages_router
 from app.api.routes.packages.public import router as public_packages_router
-from app.auth.firebase_auth import FirebaseTokenValidationError
+from app.auth.clerk_auth import ClerkTokenValidationError
 from app.core.config import Settings
 from app.domain.auth.models import AuthenticatedUser
 from app.domain.packages.repository import PackageRecord
@@ -19,7 +19,7 @@ from fastapi import APIRouter, FastAPI
 from fastapi.testclient import TestClient
 
 
-class StubFirebaseAuthService:
+class StubClerkAuthService:
     def __init__(self) -> None:
         self._tokens: dict[str, AuthenticatedUser] = {}
 
@@ -30,7 +30,7 @@ class StubFirebaseAuthService:
         try:
             return self._tokens[token]
         except KeyError as exc:
-            raise FirebaseTokenValidationError("Invalid token") from exc
+            raise ClerkTokenValidationError("Invalid token") from exc
 
 
 @pytest.fixture
@@ -63,14 +63,13 @@ def client() -> TestClient:
     api_router.include_router(admin_packages_router)
     app.include_router(api_router)
     app.state.settings = Settings(
+        environment="test",
         api_prefix="/api",
         database_url="sqlite:///./test.db",
-        google_cloud_project="letsgodb",
-        firebase_project_id="letsgodb",
-        firebase_admin_role="admin",
+        clerk_admin_claim="admin",
     )
     app.state.package_service = PackageService(repository=repository)
-    app.state.firebase_auth_service = StubFirebaseAuthService()
+    app.state.clerk_auth_service = StubClerkAuthService()
     return TestClient(app)
 
 
@@ -132,7 +131,7 @@ def test_admin_endpoint_returns_401_for_invalid_token(client: TestClient) -> Non
 
 
 def test_admin_endpoint_returns_403_for_non_admin_user(client: TestClient) -> None:
-    client.app.state.firebase_auth_service.add_token(
+    client.app.state.clerk_auth_service.add_token(
         "member-token",
         AuthenticatedUser(
             subject="user-123",
@@ -148,7 +147,7 @@ def test_admin_endpoint_returns_403_for_non_admin_user(client: TestClient) -> No
 
 
 def test_admin_user_can_manage_packages(client: TestClient) -> None:
-    client.app.state.firebase_auth_service.add_token(
+    client.app.state.clerk_auth_service.add_token(
         "admin-token",
         AuthenticatedUser(
             subject="admin-123",

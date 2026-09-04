@@ -63,9 +63,9 @@ class FakeGcsClient:
 
 def _build_service(bucket: FakeBucket) -> GcsStorageService:
     return GcsStorageService(
-        project_id="letsgodb",
+        project_id="test-project",
         bucket_name="letsgosa-package-images",
-        public_base_url="https://storage.googleapis.com/letsgosa-package-images",
+        public_base_url="https://cdn.example.invalid/images",
         client=FakeGcsClient(bucket),
     )
 
@@ -84,7 +84,7 @@ def test_upload_image_succeeds() -> None:
         ("packages/cape-town-tour/photo.jpg", b"\xff\xd8\xfftest", 7, "image/jpeg")
     ]
     assert stored_object.url == (
-        "https://storage.googleapis.com/letsgosa-package-images/packages/cape-town-tour/photo.jpg"
+        "https://cdn.example.invalid/images/packages/cape-town-tour/photo.jpg"
     )
 
 
@@ -129,7 +129,7 @@ def test_extract_object_name_supports_public_bucket_urls() -> None:
 
     assert (
         storage.extract_object_name(
-            "https://storage.googleapis.com/letsgosa-package-images/packages/cape-town-tour/photo.jpg"
+            "https://cdn.example.invalid/images/packages/cape-town-tour/photo.jpg"
         )
         == "packages/cape-town-tour/photo.jpg"
     )

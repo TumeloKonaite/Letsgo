@@ -51,13 +51,13 @@ def _build_service() -> PackageService:
 @dataclass
 class FakeStorageService:
     def extract_object_name(self, url: str) -> str | None:
-        prefix = "https://storage.googleapis.com/letsgosa-package-images/"
+        prefix = "https://cdn.example.invalid/images/"
         if not url.startswith(prefix):
             return None
         return url[len(prefix) :]
 
     def get_public_url(self, object_name: str) -> str:
-        return f"https://storage.googleapis.com/letsgosa-package-images/{object_name}"
+        return f"https://cdn.example.invalid/images/{object_name}"
 
 
 @dataclass
@@ -212,7 +212,7 @@ def test_delete_missing_package_fails() -> None:
 def test_public_package_urls_are_normalized_for_storage_images() -> None:
     storage_image = PackageImageRecord(
         id=10,
-        image_url="https://storage.googleapis.com/letsgosa-package-images/packages/cape-town/hero.jpg",
+        image_url="https://cdn.example.invalid/images/packages/cape-town/hero.jpg",
         alt_text="Hero",
         sort_order=0,
         is_cover=True,
@@ -255,13 +255,13 @@ def test_public_package_urls_are_normalized_for_storage_images() -> None:
     detail_payload = service.get_published_package_by_slug("existing-package")
 
     assert list_payload[0].hero_image_url == (
-        "https://storage.googleapis.com/letsgosa-package-images/packages/cape-town/hero.jpg"
+        "https://cdn.example.invalid/images/packages/cape-town/hero.jpg"
     )
     assert detail_payload.hero_image_url == (
-        "https://storage.googleapis.com/letsgosa-package-images/packages/cape-town/hero.jpg"
+        "https://cdn.example.invalid/images/packages/cape-town/hero.jpg"
     )
     assert detail_payload.images[0].image_url == (
-        "https://storage.googleapis.com/letsgosa-package-images/packages/cape-town/hero.jpg"
+        "https://cdn.example.invalid/images/packages/cape-town/hero.jpg"
     )
 
 
@@ -270,7 +270,7 @@ def test_public_package_urls_fall_back_to_stored_url_when_storage_is_unavailable
 ):
     storage_image = PackageImageRecord(
         id=10,
-        image_url="https://storage.googleapis.com/letsgosa-package-images/packages/cape-town/hero.jpg",
+        image_url="https://cdn.example.invalid/images/packages/cape-town/hero.jpg",
         alt_text="Hero",
         sort_order=0,
         is_cover=True,

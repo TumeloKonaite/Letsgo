@@ -8,7 +8,7 @@ def test_health_endpoint_returns_ok(client) -> None:
     assert response.json() == {
         "status": "ok",
         "application": "LetsGoSA API",
-        "environment": "development",
+        "environment": "test",
     }
 
 
