@@ -4,7 +4,6 @@ from email.message import EmailMessage
 from unittest.mock import MagicMock, patch
 
 import pytest
-
 from app.domain.contact import ContactSubmission
 from app.infrastructure.email import EmailDeliveryError
 from app.infrastructure.email.smtp_email_sender import SMTPEmailSender

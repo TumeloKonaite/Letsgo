@@ -1,7 +1,7 @@
 from pathlib import Path
 
-from app.core import config
 import pytest
+from app.core import config
 
 
 def test_load_dotenv_sets_missing_environment_values(

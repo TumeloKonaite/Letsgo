@@ -4,7 +4,6 @@ from dataclasses import dataclass
 from decimal import Decimal
 
 import pytest
-
 from app.api.schemas.packages import PackageCreate, PackageUpdate
 from app.domain.packages.repository import (
     PackageDetailRecord,

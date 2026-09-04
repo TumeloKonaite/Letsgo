@@ -5,8 +5,8 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Response, status
 
 from app.api.schemas.packages import (
-    AdminPackageResponse,
     AdminPackagePutRequest,
+    AdminPackageResponse,
     PackageCreate,
     PackageResponse,
     PackageUpdate,

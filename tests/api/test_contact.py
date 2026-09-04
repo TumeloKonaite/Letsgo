@@ -2,11 +2,11 @@ from __future__ import annotations
 
 from unittest.mock import Mock
 
-from fastapi.testclient import TestClient
 import pytest
-
 from app.domain.contact import ContactServiceError, ContactSubmission
 from app.main import create_application
+from fastapi.testclient import TestClient
+
 from tests.api.firebase_auth_helpers import build_test_settings
 
 

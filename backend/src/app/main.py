@@ -5,23 +5,23 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.auth.firebase_auth import FirebaseAuthService
 from app.api.router import api_router
 from app.api.routes.chat import router as chat_router
+from app.api.routes.health import router as health_router
+from app.auth.firebase_auth import FirebaseAuthService
 from app.chatbot.conversation_store import FileConversationStore
 from app.chatbot.facts_loader import FactsLoader
 from app.chatbot.llm import OpenAIClient, UnavailableLLMClient
 from app.chatbot.prompt_builder import TwinPromptBuilder
 from app.chatbot.resource_loader import ResourceLoader
 from app.chatbot.service import TwinResourceLoaders, TwinService
-from app.api.routes.health import router as health_router
 from app.core.config import Settings, get_settings
 from app.core.firebase import initialize_firebase_app
-from app.domain.contact.service import ContactService
 from app.domain.bookings.service import BookingService
+from app.domain.contact.service import ContactService
 from app.domain.packages.service import PackageService
-from app.infrastructure.contact import build_contact_repository
 from app.infrastructure.bookings import PostgresBookingRepository
+from app.infrastructure.contact import build_contact_repository
 from app.infrastructure.database.session import (
     create_database_engine,
     create_session_factory,

@@ -3,12 +3,12 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from decimal import Decimal
 
-from fastapi.testclient import TestClient
 import pytest
-
 from app.domain.packages.storage import StoredObject
 from app.infrastructure.database.models import Package, PackageImage
 from app.main import create_application
+from fastapi.testclient import TestClient
+
 from tests.api.firebase_auth_helpers import (
     TEST_ADMIN_TOKEN,
     TEST_EDITOR_TOKEN,

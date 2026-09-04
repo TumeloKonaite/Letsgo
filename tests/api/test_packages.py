@@ -3,9 +3,7 @@ from __future__ import annotations
 from datetime import date
 from decimal import Decimal
 
-from fastapi.testclient import TestClient
 import pytest
-
 from app.infrastructure.database.models import (
     Package,
     PackageAvailability,
@@ -16,6 +14,8 @@ from app.infrastructure.database.models import (
     PackagePublicationStatus,
 )
 from app.main import create_application
+from fastapi.testclient import TestClient
+
 from tests.api.firebase_auth_helpers import build_test_settings
 
 

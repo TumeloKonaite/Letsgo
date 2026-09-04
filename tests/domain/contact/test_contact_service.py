@@ -3,7 +3,6 @@ from __future__ import annotations
 from unittest.mock import Mock, call
 
 import pytest
-
 from app.domain.contact import ContactService, ContactServiceError, ContactSubmission
 from app.infrastructure.email import EmailDeliveryError
 

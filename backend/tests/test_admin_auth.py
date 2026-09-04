@@ -3,9 +3,6 @@ from __future__ import annotations
 from decimal import Decimal
 
 import pytest
-from fastapi import APIRouter, FastAPI
-from fastapi.testclient import TestClient
-
 from app.api.routes.admin.auth import router as admin_auth_router
 from app.api.routes.admin.packages import router as admin_packages_router
 from app.api.routes.packages.public import router as public_packages_router
@@ -18,6 +15,8 @@ from app.infrastructure.database.models import PackagePublicationStatus
 from app.infrastructure.packages.in_memory_package_repository import (
     InMemoryPackageRepository,
 )
+from fastapi import APIRouter, FastAPI
+from fastapi.testclient import TestClient
 
 
 class StubFirebaseAuthService:

@@ -4,6 +4,7 @@ from datetime import date
 from decimal import Decimal
 
 from pydantic import BaseModel, Field, model_validator
+
 from app.infrastructure.database.models import PackagePublicationStatus
 
 
@@ -104,7 +105,7 @@ class AdminPackageBase(BaseModel):
     inclusions: list[AdminPackageInclusionInput] = Field(default_factory=list)
 
     @model_validator(mode="after")
-    def validate_nested_display_orders(self) -> "AdminPackageBase":
+    def validate_nested_display_orders(self) -> AdminPackageBase:
         _validate_nested_display_orders(self.itinerary, self.inclusions)
         return self
 
@@ -132,7 +133,7 @@ class PackageUpdate(BaseModel):
     inclusions: list[AdminPackageInclusionInput] | None = None
 
     @model_validator(mode="after")
-    def validate_nested_display_orders(self) -> "PackageUpdate":
+    def validate_nested_display_orders(self) -> PackageUpdate:
         _validate_nested_display_orders(self.itinerary, self.inclusions)
         return self
 

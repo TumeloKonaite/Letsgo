@@ -4,11 +4,11 @@ from dataclasses import dataclass
 from decimal import Decimal
 from uuid import uuid4
 
-from fastapi.testclient import TestClient
 import pytest
-
 from app.infrastructure.database.models import Package, PackagePublicationStatus
 from app.main import create_application
+from fastapi.testclient import TestClient
+
 from tests.api.firebase_auth_helpers import (
     TEST_ADMIN_TOKEN,
     TEST_EDITOR_TOKEN,

@@ -9,11 +9,11 @@ from google.cloud.storage import Bucket, Client
 
 from app.core.config import Settings
 from app.domain.packages.storage import (
-    StoredObject,
     StorageAuthenticationError,
     StorageBucketNotFoundError,
     StorageError,
     StorageService,
+    StoredObject,
 )
 
 
