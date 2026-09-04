@@ -1,11 +1,10 @@
 from __future__ import annotations
 
 import pytest
-from httpx import Request, Response
-from openai import AuthenticationError
-
 from app.chatbot.llm import LLMConfigurationError, OpenAIClient
 from app.core.config import Settings
+from httpx import Request, Response
+from openai import AuthenticationError
 
 
 class _FailingCompletionsClient:

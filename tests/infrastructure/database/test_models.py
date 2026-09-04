@@ -1,11 +1,6 @@
 from datetime import date
 from decimal import Decimal
 
-from sqlalchemy import CheckConstraint
-from sqlalchemy import create_engine, text
-from sqlalchemy import inspect as sa_inspect
-from sqlalchemy.dialects import postgresql
-
 from app.infrastructure.database.models import (
     Base,
     Booking,
@@ -26,6 +21,9 @@ from app.infrastructure.database.session import (
     create_database_engine,
     initialize_database,
 )
+from sqlalchemy import CheckConstraint, create_engine, text
+from sqlalchemy import inspect as sa_inspect
+from sqlalchemy.dialects import postgresql
 
 
 def test_models_are_importable_and_registered() -> None:

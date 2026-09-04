@@ -1,9 +1,10 @@
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass, field
 from datetime import date
 from decimal import Decimal
-from typing import Mapping, Protocol
+from typing import Protocol
 
 from app.infrastructure.database.models import PackagePublicationStatus
 

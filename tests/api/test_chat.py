@@ -2,10 +2,10 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from fastapi.testclient import TestClient
-
 from app.core.dependencies import get_twin_service
 from app.main import create_application
+from fastapi.testclient import TestClient
+
 from tests.api.firebase_auth_helpers import build_test_settings
 
 

@@ -5,10 +5,10 @@ from datetime import UTC, datetime
 from sqlalchemy.orm import Session, sessionmaker
 
 from app.domain.contact.models import ContactSubmission
+from app.infrastructure.database.models import ContactEmailStatus
 from app.infrastructure.database.models import (
     ContactSubmission as ContactSubmissionModel,
 )
-from app.infrastructure.database.models import ContactEmailStatus
 
 
 class PostgresContactRepository:

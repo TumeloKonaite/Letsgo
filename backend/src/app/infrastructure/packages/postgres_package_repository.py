@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from typing import Mapping, cast
+from collections.abc import Mapping
+from typing import cast
 
 from sqlalchemy import Select, or_, select
 from sqlalchemy.orm import Session, selectinload, sessionmaker

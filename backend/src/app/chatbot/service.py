@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from typing import Any, Protocol
 
 from app.chatbot.conversation_store import ConversationStore
+from app.chatbot.facts_loader import ContentLoadError
 from app.chatbot.prompt_builder import TwinPromptBuilder
 from app.core.config import Settings
 
@@ -66,7 +67,7 @@ class TwinService:
             return self.prompt_builder.build_system_prompt(
                 **self.resource_loaders.prompt_context()
             ).strip()
-        except Exception:
+        except ContentLoadError:
             return self.resource_loaders.fallback_personality().strip()
 
     @staticmethod

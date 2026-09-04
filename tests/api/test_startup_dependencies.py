@@ -1,8 +1,8 @@
 from __future__ import annotations
 
+from app.main import create_application
 from fastapi.testclient import TestClient
 
-from app.main import create_application
 from tests.api.firebase_auth_helpers import build_test_settings
 
 

@@ -1,8 +1,8 @@
 from app.infrastructure.database.models.base import Base
 from app.infrastructure.database.models.booking import Booking, BookingStatus
 from app.infrastructure.database.models.contact import (
-    ContactSubmission,
     ContactEmailStatus,
+    ContactSubmission,
 )
 from app.infrastructure.database.models.package import (
     Package,
@@ -19,8 +19,8 @@ __all__ = [
     "Base",
     "Booking",
     "BookingStatus",
-    "ContactSubmission",
     "ContactEmailStatus",
+    "ContactSubmission",
     "Package",
     "PackageAvailability",
     "PackageAvailabilityStatus",

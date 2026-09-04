@@ -12,17 +12,17 @@ from app.auth.firebase_auth import (
     FirebaseTokenExpiredError,
     FirebaseTokenValidationError,
 )
+from app.chatbot.service import TwinService
 from app.core.config import Settings
-from app.domain.contact.repository import ContactRepository
-from app.domain.contact.service import ContactService
+from app.domain.auth.models import AuthenticatedUser
 from app.domain.bookings.repository import BookingRepository
 from app.domain.bookings.service import BookingService
+from app.domain.contact.repository import ContactRepository
+from app.domain.contact.service import ContactService
 from app.domain.packages.repository import PackageRepository
 from app.domain.packages.service import PackageService
 from app.domain.packages.storage import StorageService
-from app.chatbot.service import TwinService
 from app.infrastructure.email.base import EmailSender
-from app.domain.auth.models import AuthenticatedUser
 
 bearer_scheme = HTTPBearer(auto_error=False)
 

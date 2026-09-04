@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from enum import Enum
+from enum import StrEnum
 
 from sqlalchemy import Enum as SqlEnum
 from sqlalchemy import ForeignKey, Index, Integer, String, Text
@@ -9,11 +9,11 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.infrastructure.database.models.base import Base, TimestampMixin
 
 
-def _enum_values(enum_cls: type[Enum]) -> list[str]:
+def _enum_values(enum_cls: type[StrEnum]) -> list[str]:
     return [member.value for member in enum_cls]
 
 
-class BookingStatus(str, Enum):
+class BookingStatus(StrEnum):
     NEW = "new"
     CONTACTED = "contacted"
     CONFIRMED = "confirmed"

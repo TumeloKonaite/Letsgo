@@ -2,13 +2,12 @@ from __future__ import annotations
 
 from datetime import date
 from decimal import Decimal
-from enum import Enum
+from enum import StrEnum
 
 from sqlalchemy import (
     Boolean,
     CheckConstraint,
     Date,
-    Enum as SqlEnum,
     ForeignKey,
     Index,
     Integer,
@@ -16,29 +15,32 @@ from sqlalchemy import (
     String,
     Text,
 )
+from sqlalchemy import (
+    Enum as SqlEnum,
+)
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.infrastructure.database.models.base import Base, CreatedAtMixin, TimestampMixin
 
 
-def _enum_values(enum_cls: type[Enum]) -> list[str]:
+def _enum_values(enum_cls: type[StrEnum]) -> list[str]:
     return [member.value for member in enum_cls]
 
 
-class PackageAvailabilityStatus(str, Enum):
+class PackageAvailabilityStatus(StrEnum):
     AVAILABLE = "available"
     SOLD_OUT = "sold_out"
     CANCELLED = "cancelled"
     CLOSED = "closed"
 
 
-class PackagePublicationStatus(str, Enum):
+class PackagePublicationStatus(StrEnum):
     DRAFT = "draft"
     PUBLISHED = "published"
     ARCHIVED = "archived"
 
 
-class PackageInclusionType(str, Enum):
+class PackageInclusionType(StrEnum):
     INCLUDED = "included"
     EXCLUDED = "excluded"
 

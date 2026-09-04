@@ -1,19 +1,20 @@
 from __future__ import annotations
 
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 
-from sqlalchemy import DateTime, Enum as SqlEnum, Integer, String, Text
+from sqlalchemy import DateTime, Integer, String, Text
+from sqlalchemy import Enum as SqlEnum
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.infrastructure.database.models.base import Base, CreatedAtMixin
 
 
-def _enum_values(enum_cls: type[Enum]) -> list[str]:
+def _enum_values(enum_cls: type[StrEnum]) -> list[str]:
     return [member.value for member in enum_cls]
 
 
-class ContactEmailStatus(str, Enum):
+class ContactEmailStatus(StrEnum):
     PENDING = "pending"
     SENT = "sent"
     FAILED = "failed"
