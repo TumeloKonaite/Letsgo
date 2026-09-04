@@ -192,7 +192,7 @@ export function AdminPackagesPage() {
           <SectionHeading
             eyebrow="Inventory"
             title="Package dashboard"
-            description="Every request on this page is sent with the current Firebase ID token."
+            description="Every request on this page is sent with the current Clerk session token."
           />
 
           {actionError ? (

@@ -1,136 +1,258 @@
+from __future__ import annotations
+
+from dataclasses import replace
 from pathlib import Path
 
 import pytest
 from app.core import config
 
+TEST_JWT_KEY = """-----BEGIN PUBLIC KEY-----
+MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA5nhAUsF4yGsMxkuAnXMX
+yzHzrpah8+DlwvHp8nifUbbfbWe5n1RXimcCEKnrcwxOqh0C2mWjpXl1eSZUIBuY
+CU4ikpI1O3vb7wY2wpYGDR9Adw2BGKpo/+NKA6uUiWRhj24YN/P5PuctqrNRnRRg
+q3S9BOu9zy7ce82VJ5o0tPVUsTsQ3TtzcLDvZtCfJewY5JbjEao1t3ZIGGkFJW+z
+4vsc+dEdhHvh5L8dOEPxUoH+YTx0GfO1PJQOyT+B+IkvRyhlgUYVprMTwmKI2/xj
+iD80dQjQOIQJW8nX7TLOZdFpUhdbzQXj/hTDAXECnCRka9NLDxPmWxPvrQC4n2k1
+gQIDAQAB
+-----END PUBLIC KEY-----"""
 
-def test_load_dotenv_sets_missing_environment_values(
+
+def valid_settings(**overrides) -> config.Settings:
+    values = {
+        "environment": "test",
+        "database_url": "sqlite:///:memory:",
+        "cors_allow_origins": ("http://localhost:5173",),
+        "clerk_secret_key": "sk_test_synthetic",
+        "clerk_jwt_key": TEST_JWT_KEY,
+        "clerk_issuer_url": "https://clerk.example.invalid",
+        "clerk_authorized_parties": ("http://localhost:5173",),
+        "clerk_admin_claim": "admin",
+        "storage_provider": "gcs",
+        "gcp_project_id": "test-project",
+        "gcs_bucket_name": "test-images",
+        "gcs_public_base_url": "https://storage.example.invalid/images",
+    }
+    values.update(overrides)
+    return config.Settings(**values)
+
+
+def production_settings(**overrides) -> config.Settings:
+    settings = replace(
+        valid_settings(),
+        environment="production",
+        database_url=(
+            "postgresql+psycopg://app:synthetic@db.example.invalid:5432/letsgosa"
+            "?sslmode=verify-full"
+        ),
+        cors_allow_origins=("https://travel.example.invalid",),
+        clerk_authorized_parties=("https://travel.example.invalid",),
+        google_application_credentials="/run/secrets/gcs-credentials.json",
+        openai_api_key="synthetic-openai-key",
+        smtp_host="smtp.example.invalid",
+        smtp_port=587,
+        smtp_from_email="sender@example.invalid",
+        contact_to_email="contact@example.invalid",
+        smtp_use_tls=True,
+    )
+    return replace(settings, **overrides)
+
+
+def test_load_dotenv_sets_missing_values_for_explicit_development_file(
     monkeypatch, tmp_path: Path
 ) -> None:
     dotenv_path = tmp_path / ".env"
     dotenv_path.write_text(
-        "GCP_PROJECT_ID=letsgodb\n"
-        "FIREBASE_PROJECT_ID=letsgodb\n"
-        'FIREBASE_ADMIN_ROLE="admin"',
+        "LETSGOSA_ENV=development\nCLERK_ADMIN_CLAIM=admin\n",
         encoding="utf-8",
     )
-
-    monkeypatch.delenv("GCP_PROJECT_ID", raising=False)
-    monkeypatch.delenv("FIREBASE_PROJECT_ID", raising=False)
-    monkeypatch.delenv("FIREBASE_ADMIN_ROLE", raising=False)
+    monkeypatch.delenv("LETSGOSA_ENV", raising=False)
+    monkeypatch.delenv("CLERK_ADMIN_CLAIM", raising=False)
     monkeypatch.setattr(config, "_find_dotenv_path", lambda: dotenv_path)
 
     config._load_dotenv()
 
-    assert config.os.environ["GCP_PROJECT_ID"] == "letsgodb"
-    assert config.os.environ["FIREBASE_PROJECT_ID"] == "letsgodb"
-    assert config.os.environ["FIREBASE_ADMIN_ROLE"] == "admin"
+    assert config.os.environ["LETSGOSA_ENV"] == "development"
+    assert config.os.environ["CLERK_ADMIN_CLAIM"] == "admin"
 
 
-def test_load_dotenv_does_not_override_existing_environment_values(
-    monkeypatch,
-    tmp_path: Path,
-) -> None:
+def test_dotenv_is_not_loaded_for_production(monkeypatch, tmp_path: Path) -> None:
     dotenv_path = tmp_path / ".env"
     dotenv_path.write_text(
-        "FIREBASE_ADMIN_ROLE=admin\n",
+        "LETSGOSA_ENV=development\nCLERK_SECRET_KEY=must-not-load\n",
         encoding="utf-8",
     )
-
-    monkeypatch.setenv("FIREBASE_ADMIN_ROLE", "super-admin")
+    monkeypatch.setenv("LETSGOSA_ENV", "production")
+    monkeypatch.delenv("CLERK_SECRET_KEY", raising=False)
     monkeypatch.setattr(config, "_find_dotenv_path", lambda: dotenv_path)
 
     config._load_dotenv()
 
-    assert config.os.environ["FIREBASE_ADMIN_ROLE"] == "super-admin"
+    assert "CLERK_SECRET_KEY" not in config.os.environ
 
 
-def test_settings_parse_cors_origins_from_comma_separated_env(monkeypatch) -> None:
-    monkeypatch.setenv(
-        "LETSGOSA_CORS_ALLOW_ORIGINS",
-        "http://localhost:5173, https://letsgosouth.africa ,http://127.0.0.1:4173",
-    )
+def test_settings_parse_canonical_environment_variables(monkeypatch) -> None:
+    monkeypatch.setattr(config, "_load_dotenv", lambda: None)
+    monkeypatch.setenv("LETSGOSA_ENV", "development")
+    monkeypatch.setenv("LETSGOSA_DATABASE_URL", "sqlite:///./local.db")
+    monkeypatch.setenv("CORS_ORIGINS", "http://localhost:5173, http://127.0.0.1:5173")
 
     settings = config.Settings.from_env()
 
+    assert settings.environment == "development"
+    assert settings.database_url == "sqlite:///./local.db"
     assert settings.cors_allow_origins == (
         "http://localhost:5173",
-        "https://letsgosouth.africa",
-        "http://127.0.0.1:4173",
+        "http://127.0.0.1:5173",
     )
 
 
-def test_settings_support_cors_origins_alias(monkeypatch) -> None:
-    monkeypatch.delenv("LETSGOSA_CORS_ALLOW_ORIGINS", raising=False)
-    monkeypatch.setenv(
-        "CORS_ORIGINS",
-        "https://letsgodb.web.app, https://letsgodb.firebaseapp.com",
-    )
+def test_development_cors_default_is_never_applied_to_production(monkeypatch) -> None:
+    monkeypatch.setattr(config, "_load_dotenv", lambda: None)
+    monkeypatch.setenv("LETSGOSA_ENV", "production")
+    monkeypatch.delenv("CORS_ORIGINS", raising=False)
 
     settings = config.Settings.from_env()
 
-    assert settings.cors_allow_origins == (
-        "https://letsgodb.web.app",
-        "https://letsgodb.firebaseapp.com",
-    )
+    assert settings.cors_allow_origins == ()
 
 
-def test_default_cors_origins_include_firebase_hosting_domains() -> None:
-    assert "https://letsgodb.web.app" in config.DEFAULT_CORS_ALLOW_ORIGINS
-    assert "https://letsgodb.firebaseapp.com" in config.DEFAULT_CORS_ALLOW_ORIGINS
-
-
-def test_production_settings_reject_sqlite_database_urls() -> None:
-    settings = config.Settings(
-        environment="production",
-        database_url="sqlite:///./letsgosa.db",
-    )
-
-    with pytest.raises(
-        ValueError,
-        match="Production requires PostgreSQL via DATABASE_URL or LETSGOSA_DATABASE_URL",
-    ):
-        settings.validate_database_configuration()
-
-
-def test_production_settings_accept_postgresql_psycopg_database_urls() -> None:
-    settings = config.Settings(
-        environment="production",
-        database_url="postgresql+psycopg://user:password@db.example.com:5432/letsgosa_prod",
-    )
-
-    settings.validate_database_configuration()
-
-
-def test_production_settings_accept_cloud_sql_unix_socket_urls() -> None:
-    settings = config.Settings(
-        environment="production",
-        database_url=(
-            "postgresql+psycopg://letsgodev:password@/letsgo"
-            "?host=/cloudsql/letsgodb:us-central1:free-trial-first-project"
-        ),
-        cloud_sql_connection_name="letsgodb:us-central1:free-trial-first-project",
-    )
-
-    settings.validate_database_configuration()
-    assert (
-        settings.cloud_sql_connection_name
-        == "letsgodb:us-central1:free-trial-first-project"
-    )
-
-
-def test_non_production_settings_allow_sqlite_fallback() -> None:
-    settings = config.Settings()
-
-    settings.validate_database_configuration()
-    assert settings.database_url == config.DEFAULT_DATABASE_URL
-
-
-def test_settings_support_database_url_alias(monkeypatch) -> None:
-    monkeypatch.setattr("app.core.config._load_dotenv", lambda: None)
+def test_retired_environment_and_database_aliases_are_ignored(monkeypatch) -> None:
+    monkeypatch.setattr(config, "_load_dotenv", lambda: None)
+    monkeypatch.delenv("LETSGOSA_ENV", raising=False)
     monkeypatch.delenv("LETSGOSA_DATABASE_URL", raising=False)
-    monkeypatch.setenv("DATABASE_URL", "sqlite:///./alias.db")
+    monkeypatch.setenv("ENVIRONMENT", "production")
+    monkeypatch.setenv("DATABASE_URL", "postgresql://legacy:secret@legacy.invalid/app")
 
     settings = config.Settings.from_env()
 
-    assert settings.database_url == "sqlite:///./alias.db"
+    assert settings.environment == ""
+    assert settings.database_url == ""
+
+
+def test_environment_identifier_is_required() -> None:
+    with pytest.raises(config.ConfigurationError, match="LETSGOSA_ENV"):
+        replace(valid_settings(), environment="").validate_environment()
+
+
+def test_valid_production_configuration_passes() -> None:
+    production_settings().validate()
+
+
+def test_production_requires_explicit_database_url() -> None:
+    with pytest.raises(config.ConfigurationError, match="LETSGOSA_DATABASE_URL"):
+        production_settings(database_url="").validate()
+
+
+@pytest.mark.parametrize(
+    "database_url",
+    (
+        "not a database url",
+        "mysql://user:password@db.example.invalid/app",
+        "postgresql+unsupported://user:password@db.example.invalid/app?sslmode=verify-full",
+        "postgresql+psycopg://user:password@db.example.invalid:not-a-port/app?sslmode=verify-full",
+        "postgresql+psycopg://db.example.invalid/app",
+        "postgresql+psycopg://user:password@db.example.invalid/app",
+    ),
+)
+def test_production_rejects_malformed_or_unsafe_database_urls(
+    database_url: str,
+) -> None:
+    with pytest.raises(config.ConfigurationError):
+        production_settings(database_url=database_url).validate_database_configuration()
+
+
+def test_incomplete_clerk_configuration_is_rejected() -> None:
+    with pytest.raises(config.ConfigurationError, match="CLERK_JWT_KEY"):
+        replace(valid_settings(), clerk_jwt_key=None).validate_clerk_configuration()
+
+
+def test_malformed_clerk_issuer_is_rejected_without_echoing_secret() -> None:
+    secret = "sk_live_do-not-log-this"
+    settings = replace(
+        valid_settings(), clerk_secret_key=secret, clerk_issuer_url="not-a-url"
+    )
+
+    with pytest.raises(config.ConfigurationError) as caught:
+        settings.validate_clerk_configuration()
+
+    assert secret not in str(caught.value)
+
+
+def test_settings_repr_redacts_secret_bearing_values() -> None:
+    settings = replace(
+        valid_settings(),
+        database_url="postgresql://user:database-secret@db.example.invalid/app",
+        clerk_secret_key="clerk-secret",
+        clerk_jwt_key="jwt-secret",
+        clerk_webhook_signing_secret="webhook-secret",
+        gcp_service_account_json="storage-secret",
+        smtp_password="smtp-secret",
+        openai_api_key="openai-secret",
+    )
+
+    rendered = repr(settings)
+
+    for secret in (
+        "database-secret",
+        "clerk-secret",
+        "jwt-secret",
+        "webhook-secret",
+        "storage-secret",
+        "smtp-secret",
+        "openai-secret",
+    ):
+        assert secret not in rendered
+
+
+def test_incomplete_storage_configuration_is_rejected() -> None:
+    with pytest.raises(config.ConfigurationError, match="GCS_BUCKET_NAME"):
+        replace(valid_settings(), gcs_bucket_name=None).validate_storage_configuration()
+
+
+def test_production_storage_requires_explicit_credentials() -> None:
+    with pytest.raises(config.ConfigurationError, match="GCS credentials"):
+        production_settings(
+            google_application_credentials=None,
+            gcp_service_account_json=None,
+        ).validate_storage_configuration()
+
+
+def test_invalid_service_account_json_is_rejected_without_echoing_it() -> None:
+    secret = '{"private_key":"do-not-log"'
+    settings = replace(valid_settings(), gcp_service_account_json=secret)
+
+    with pytest.raises(config.ConfigurationError) as caught:
+        settings.validate_storage_configuration()
+
+    assert secret not in str(caught.value)
+    assert "do-not-log" not in str(caught.value)
+
+
+@pytest.mark.parametrize("environment", ("staging", "production"))
+def test_deployed_cors_rejects_wildcards(environment: str) -> None:
+    settings = replace(
+        production_settings(), environment=environment, cors_allow_origins=("*",)
+    )
+
+    with pytest.raises(config.ConfigurationError, match="cannot contain '\\*'"):
+        settings.validate_cors_configuration()
+
+
+def test_deployed_cors_rejects_paths_and_insecure_origins() -> None:
+    with pytest.raises(config.ConfigurationError):
+        replace(
+            production_settings(),
+            cors_allow_origins=("https://travel.example.invalid/admin",),
+        ).validate_cors_configuration()
+    with pytest.raises(config.ConfigurationError):
+        replace(
+            production_settings(),
+            cors_allow_origins=("http://travel.example.invalid",),
+        ).validate_cors_configuration()
+
+
+def test_partial_smtp_credentials_are_rejected() -> None:
+    with pytest.raises(config.ConfigurationError, match="configured together"):
+        replace(
+            valid_settings(), smtp_username="mailer", smtp_password=None
+        ).validate_integrations()

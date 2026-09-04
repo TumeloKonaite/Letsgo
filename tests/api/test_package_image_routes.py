@@ -9,12 +9,12 @@ from app.infrastructure.database.models import Package, PackageImage
 from app.main import create_application
 from fastapi.testclient import TestClient
 
-from tests.api.firebase_auth_helpers import (
+from tests.api.clerk_auth_helpers import (
     TEST_ADMIN_TOKEN,
     TEST_EDITOR_TOKEN,
     bearer_headers,
     build_test_settings,
-    install_stub_firebase_auth,
+    install_stub_clerk_auth,
 )
 
 
@@ -39,10 +39,10 @@ class FakeStorageService:
         self.uploads.pop(object_name, None)
 
     def get_public_url(self, object_name: str) -> str:
-        return f"https://storage.googleapis.com/letsgosa-package-images/{object_name}"
+        return f"https://cdn.example.invalid/images/{object_name}"
 
     def extract_object_name(self, url: str) -> str | None:
-        prefix = "https://storage.googleapis.com/letsgosa-package-images/"
+        prefix = "https://cdn.example.invalid/images/"
         if not url.startswith(prefix):
             return None
         return url[len(prefix) :].split("?", 1)[0]
@@ -87,7 +87,7 @@ def package_images_client(tmp_path) -> PackageImagesClient:
     storage = FakeStorageService()
 
     with TestClient(application) as client:
-        install_stub_firebase_auth(application)
+        install_stub_clerk_auth(application)
         application.state.storage_service = storage
         package_id = _seed_package(application.state.db_session_factory)
         yield PackageImagesClient(
@@ -128,7 +128,7 @@ def test_authenticated_admin_can_upload_images(
     assert payload["display_order"] == 1
     assert payload["is_cover"] is True
     assert payload["url"].startswith(
-        "https://storage.googleapis.com/letsgosa-package-images/packages/cape-town-explorer/"
+        "https://cdn.example.invalid/images/packages/cape-town-explorer/"
     )
     assert len(package_images_client.storage.uploads) == 1
 
@@ -219,7 +219,7 @@ def test_uploaded_image_metadata_is_persisted_and_listed(
     assert image.sort_order == 3
     assert image.storage_key is not None
     assert image.image_url.startswith(
-        "https://storage.googleapis.com/letsgosa-package-images/packages/cape-town-explorer/"
+        "https://cdn.example.invalid/images/packages/cape-town-explorer/"
     )
 
 

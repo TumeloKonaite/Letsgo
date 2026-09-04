@@ -6,7 +6,7 @@ from app.core.dependencies import get_twin_service
 from app.main import create_application
 from fastapi.testclient import TestClient
 
-from tests.api.firebase_auth_helpers import build_test_settings
+from tests.api.clerk_auth_helpers import build_test_settings
 
 
 def _create_chatbot_data_dir(base_dir: Path) -> Path:
@@ -32,7 +32,7 @@ def test_chat_endpoint_is_exposed_at_service_root(tmp_path: Path) -> None:
             f"sqlite:///{tmp_path / 'chat-root.db'}",
             chatbot_content_data_dir=data_dir,
             chatbot_conversation_storage_dir=data_dir / "conversations",
-            cors_allow_origins=("https://letsgodb.web.app",),
+            cors_allow_origins=("https://travel.example.invalid",),
             openai_api_key=None,
         )
     )
@@ -44,14 +44,14 @@ def test_chat_endpoint_is_exposed_at_service_root(tmp_path: Path) -> None:
     assert response.json() == {"detail": "Chat service is unavailable."}
 
 
-def test_chat_endpoint_allows_firebase_origin_at_service_root(tmp_path: Path) -> None:
+def test_chat_endpoint_allows_configured_origin_at_service_root(tmp_path: Path) -> None:
     data_dir = _create_chatbot_data_dir(tmp_path)
     application = create_application(
         settings=build_test_settings(
             f"sqlite:///{tmp_path / 'chat-cors.db'}",
             chatbot_content_data_dir=data_dir,
             chatbot_conversation_storage_dir=data_dir / "conversations",
-            cors_allow_origins=("https://letsgodb.web.app",),
+            cors_allow_origins=("https://travel.example.invalid",),
         )
     )
 
@@ -59,13 +59,16 @@ def test_chat_endpoint_allows_firebase_origin_at_service_root(tmp_path: Path) ->
         response = client.options(
             "/chat",
             headers={
-                "Origin": "https://letsgodb.web.app",
+                "Origin": "https://travel.example.invalid",
                 "Access-Control-Request-Method": "POST",
             },
         )
 
     assert response.status_code == 200
-    assert response.headers["access-control-allow-origin"] == "https://letsgodb.web.app"
+    assert (
+        response.headers["access-control-allow-origin"]
+        == "https://travel.example.invalid"
+    )
 
 
 def test_chat_returns_safe_500_without_leaking_exception_details(
@@ -77,7 +80,7 @@ def test_chat_returns_safe_500_without_leaking_exception_details(
             f"sqlite:///{tmp_path / 'chat-error.db'}",
             chatbot_content_data_dir=data_dir,
             chatbot_conversation_storage_dir=data_dir / "conversations",
-            cors_allow_origins=("https://letsgodb.web.app",),
+            cors_allow_origins=("https://travel.example.invalid",),
             openai_api_key="test-key",
         )
     )

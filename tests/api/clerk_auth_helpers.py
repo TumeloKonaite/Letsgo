@@ -2,22 +2,27 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-from app.auth.firebase_auth import (
-    FirebaseTokenExpiredError,
-    FirebaseTokenValidationError,
-)
+from app.auth.clerk_auth import ClerkTokenExpiredError, ClerkTokenValidationError
 from app.core.config import Settings
 from app.domain.auth.models import AuthenticatedUser
 
-TEST_FIREBASE_PROJECT_ID = "letsgodb"
-TEST_FIREBASE_ADMIN_CLAIM = "admin"
+TEST_CLERK_ADMIN_CLAIM = "admin"
 TEST_ADMIN_TOKEN = "admin-token"
 TEST_EDITOR_TOKEN = "editor-token"
 TEST_EXPIRED_TOKEN = "expired-token"
+TEST_JWT_KEY = """-----BEGIN PUBLIC KEY-----
+MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA5nhAUsF4yGsMxkuAnXMX
+yzHzrpah8+DlwvHp8nifUbbfbWe5n1RXimcCEKnrcwxOqh0C2mWjpXl1eSZUIBuY
+CU4ikpI1O3vb7wY2wpYGDR9Adw2BGKpo/+NKA6uUiWRhj24YN/P5PuctqrNRnRRg
+q3S9BOu9zy7ce82VJ5o0tPVUsTsQ3TtzcLDvZtCfJewY5JbjEao1t3ZIGGkFJW+z
+4vsc+dEdhHvh5L8dOEPxUoH+YTx0GfO1PJQOyT+B+IkvRyhlgUYVprMTwmKI2/xj
+iD80dQjQOIQJW8nX7TLOZdFpUhdbzQXj/hTDAXECnCRka9NLDxPmWxPvrQC4n2k1
+gQIDAQAB
+-----END PUBLIC KEY-----"""
 
 
 @dataclass(slots=True)
-class StubFirebaseAuthService:
+class StubClerkAuthService:
     users: dict[str, AuthenticatedUser] = field(default_factory=dict)
     expired_tokens: set[str] = field(default_factory=set)
 
@@ -26,26 +31,34 @@ class StubFirebaseAuthService:
 
     def verify_token(self, token: str) -> AuthenticatedUser:
         if token in self.expired_tokens:
-            raise FirebaseTokenExpiredError("Token expired")
+            raise ClerkTokenExpiredError("Token expired")
         if token not in self.users:
-            raise FirebaseTokenValidationError("Invalid token")
+            raise ClerkTokenValidationError("Invalid token")
         return self.users[token]
 
 
 def build_test_settings(database_url: str, **overrides) -> Settings:
     values = {
+        "environment": "test",
         "database_url": database_url,
-        "gcp_project_id": TEST_FIREBASE_PROJECT_ID,
-        "google_cloud_project": TEST_FIREBASE_PROJECT_ID,
-        "firebase_project_id": TEST_FIREBASE_PROJECT_ID,
-        "firebase_admin_role": TEST_FIREBASE_ADMIN_CLAIM,
-        "gcs_bucket_name": "letsgosa-package-images",
-        "gcs_public_base_url": "https://storage.googleapis.com/letsgosa-package-images",
+        "cors_allow_origins": ("http://localhost:5173",),
+        "clerk_secret_key": "sk_test_synthetic",
+        "clerk_jwt_key": TEST_JWT_KEY,
+        "clerk_issuer_url": "https://clerk.example.invalid",
+        "clerk_authorized_parties": ("http://localhost:5173",),
+        "clerk_admin_claim": TEST_CLERK_ADMIN_CLAIM,
+        "storage_provider": "gcs",
+        "gcp_project_id": "test-project",
+        "gcs_bucket_name": "test-package-images",
+        "gcs_public_base_url": "https://storage.example.invalid/images",
     }
     values.update(overrides)
-    return Settings(
-        **values,
-    )
+    if (
+        "cors_allow_origins" in overrides
+        and "clerk_authorized_parties" not in overrides
+    ):
+        values["clerk_authorized_parties"] = values["cors_allow_origins"]
+    return Settings(**values)
 
 
 def build_user(
@@ -56,7 +69,7 @@ def build_user(
     username: str | None = None,
     claims: dict[str, object] | None = None,
 ) -> AuthenticatedUser:
-    resolved_claims = {TEST_FIREBASE_ADMIN_CLAIM: admin}
+    resolved_claims = {TEST_CLERK_ADMIN_CLAIM: admin}
     if claims:
         resolved_claims.update(claims)
     return AuthenticatedUser(
@@ -67,8 +80,8 @@ def build_user(
     )
 
 
-def install_stub_firebase_auth(application) -> StubFirebaseAuthService:
-    service = StubFirebaseAuthService()
+def install_stub_clerk_auth(application) -> StubClerkAuthService:
+    service = StubClerkAuthService()
     service.add_token(
         TEST_ADMIN_TOKEN,
         build_user(
@@ -88,7 +101,7 @@ def install_stub_firebase_auth(application) -> StubFirebaseAuthService:
         ),
     )
     service.expired_tokens.add(TEST_EXPIRED_TOKEN)
-    application.state.firebase_auth_service = service
+    application.state.clerk_auth_service = service
     return service
 
 

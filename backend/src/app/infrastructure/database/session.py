@@ -19,25 +19,27 @@ REQUIRED_TABLES = frozenset(
 
 
 def create_database_engine(database_url: str) -> Engine:
+    """Create an engine with safe connection options for the selected database."""
     connect_args: dict[str, bool] = {}
     engine_kwargs: dict[str, object] = {}
     if database_url.startswith("sqlite"):
         connect_args["check_same_thread"] = False
     else:
-        # Cloud SQL connections can stay in the pool across instance reuse, so
-        # pre-ping each checkout to fail fast on stale connections.
+        # Pre-ping each checkout to fail fast on stale pooled connections.
         engine_kwargs["pool_pre_ping"] = True
 
     return create_engine(database_url, connect_args=connect_args, **engine_kwargs)
 
 
 def create_session_factory(engine: Engine) -> sessionmaker[Session]:
+    """Create the session factory shared by request-scoped sessions."""
     return sessionmaker(
         bind=engine, autoflush=False, autocommit=False, expire_on_commit=False
     )
 
 
 def initialize_database(engine: Engine) -> None:
+    """Initialize local SQLite or verify a migrated PostgreSQL schema."""
     if engine.dialect.name == "sqlite":
         Base.metadata.create_all(engine)
         _ensure_package_image_storage_key_column(engine)
@@ -51,15 +53,18 @@ def initialize_database(engine: Engine) -> None:
 
 
 def _verify_database_connection(engine: Engine) -> None:
+    """Fail startup when the configured database cannot execute a simple query."""
     with engine.connect() as connection:
         connection.execute(text("SELECT 1"))
 
 
 def verify_session_connection(session: Session) -> None:
+    """Check that an existing request session can reach the database."""
     session.execute(text("SELECT 1"))
 
 
 def _verify_required_tables(engine: Engine) -> None:
+    """Fail startup if PostgreSQL migrations have not created required tables."""
     existing_tables = set(inspect(engine).get_table_names())
     missing_tables = sorted(REQUIRED_TABLES - existing_tables)
     if not missing_tables:
@@ -74,6 +79,7 @@ def _verify_required_tables(engine: Engine) -> None:
 
 
 def _ensure_package_image_storage_key_column(engine: Engine) -> None:
+    """Keep older development SQLite databases compatible with image storage."""
     inspector = inspect(engine)
     if "package_images" not in inspector.get_table_names():
         return
@@ -91,6 +97,7 @@ def _ensure_package_image_storage_key_column(engine: Engine) -> None:
 
 
 def _migrate_legacy_booking_statuses(engine: Engine) -> None:
+    """Normalize legacy booking states in local SQLite databases."""
     inspector = inspect(engine)
     if "bookings" not in inspector.get_table_names():
         return
@@ -105,6 +112,7 @@ def _migrate_legacy_booking_statuses(engine: Engine) -> None:
 
 
 def _ensure_package_itinerary_columns(engine: Engine) -> None:
+    """Add structured itinerary fields to older local SQLite databases."""
     inspector = inspect(engine)
     if "package_itinerary_items" not in inspector.get_table_names():
         return
@@ -160,6 +168,7 @@ def _ensure_package_itinerary_columns(engine: Engine) -> None:
 
 
 def _migrate_legacy_package_statuses(engine: Engine) -> None:
+    """Normalize legacy package states in local SQLite databases."""
     inspector = inspect(engine)
     if "packages" not in inspector.get_table_names():
         return

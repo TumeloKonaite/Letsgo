@@ -183,19 +183,15 @@ def test_create_database_engine_supports_postgresql_psycopg_urls() -> None:
         engine.dispose()
 
 
-def test_create_database_engine_supports_cloud_sql_unix_socket_urls() -> None:
+def test_create_database_engine_supports_postgresql_unix_socket_urls() -> None:
     engine = create_database_engine(
-        "postgresql+psycopg://letsgodev:password@/letsgo"
-        "?host=/cloudsql/letsgodb:us-central1:free-trial-first-project"
+        "postgresql+psycopg://letsgodev:password@/letsgo?host=/var/run/postgresql"
     )
 
     try:
         assert engine.dialect.name == "postgresql"
         assert engine.url.drivername == "postgresql+psycopg"
-        assert (
-            engine.url.query["host"]
-            == "/cloudsql/letsgodb:us-central1:free-trial-first-project"
-        )
+        assert engine.url.query["host"] == "/var/run/postgresql"
     finally:
         engine.dispose()
 

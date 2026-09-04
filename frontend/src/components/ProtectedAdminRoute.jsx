@@ -5,6 +5,7 @@ import { ProtectedRoute } from "../auth/ProtectedRoute";
 import { StatusPanel } from "./StatusPanel";
 
 export function ProtectedAdminRoute({ children }) {
+  // Add an admin-claim check on top of the normal signed-in route guard.
   const { isAdmin, adminClaimName, logout } = useAuth();
 
   return (
@@ -16,7 +17,7 @@ export function ProtectedAdminRoute({ children }) {
           <div className="container">
             <StatusPanel
               title="Admin claim required"
-              message={`Your account is signed in, but the Firebase custom claim "${adminClaimName}" is missing or false.`}
+              message={`Your account is signed in, but the Clerk session claim "${adminClaimName}" is missing or false.`}
               tone="error"
               action={(
                 <>

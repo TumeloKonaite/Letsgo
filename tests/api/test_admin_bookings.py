@@ -8,12 +8,12 @@ from app.infrastructure.database.models import Booking, BookingStatus, Package
 from app.main import create_application
 from fastapi.testclient import TestClient
 
-from tests.api.firebase_auth_helpers import (
+from tests.api.clerk_auth_helpers import (
     TEST_ADMIN_TOKEN,
     TEST_EDITOR_TOKEN,
     bearer_headers,
     build_test_settings,
-    install_stub_firebase_auth,
+    install_stub_clerk_auth,
 )
 
 
@@ -72,7 +72,7 @@ def admin_bookings_client(tmp_path) -> AdminBookingsClient:
     application = create_application(settings=build_test_settings(database_url))
 
     with TestClient(application) as client:
-        install_stub_firebase_auth(application)
+        install_stub_clerk_auth(application)
         package_id, booking_id, contacted_booking_id = _seed_bookings(
             application.state.db_session_factory
         )

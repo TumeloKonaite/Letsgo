@@ -5,6 +5,7 @@ import { useAuth } from "../../auth/AuthProvider";
 import { StatusPanel } from "../../components/StatusPanel";
 
 export function Login() {
+  // Start Clerk sign-in and preserve the originally requested admin route.
   const location = useLocation();
   const [searchParams] = useSearchParams();
   const { isReady, isAuthenticated, login, error, clearError, isConfigured } = useAuth();
@@ -29,14 +30,14 @@ export function Login() {
             <span className="eyebrow-dark">Admin access</span>
             <h1>Sign in to manage packages</h1>
             <p>
-              Admin pages use Firebase Auth with Google sign-in. Public pages remain
-              open, but package-management routes require a valid Firebase ID token.
+              Admin pages use Clerk authentication. Public pages remain open, but
+              package-management routes require a valid Clerk session token.
             </p>
 
             {!isReady ? (
               <StatusPanel
                 title="Preparing login"
-                message="Checking for an existing Firebase admin session."
+                message="Checking for an existing Clerk admin session."
               />
             ) : null}
 
@@ -50,8 +51,8 @@ export function Login() {
 
             {!isConfigured ? (
               <StatusPanel
-                title="Missing Firebase configuration"
-                message="Add the Vite Firebase web config values before opening admin pages."
+                title="Missing Clerk configuration"
+                message="Add the public Vite Clerk configuration before opening admin pages."
                 tone="error"
               />
             ) : null}

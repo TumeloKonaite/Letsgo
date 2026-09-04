@@ -14,8 +14,8 @@ The authoritative development/staging/production key inventory, ownership model,
 
 ## Application/runtime dependencies
 
-- Backend: Python 3.12 plus the locked FastAPI/Uvicorn, SQLAlchemy/Alembic, `psycopg`, Google Cloud Storage, OpenAI, PyPDF and multipart dependencies. Add the Modal SDK/deployment entrypoint and a maintained Clerk backend/JWT verifier; remove `firebase-admin` after the Clerk adapter lands.
-- Frontend: Node 20 build runtime with the existing React 18/Vite stack. Add `@clerk/react` and remove the Firebase browser SDK after the auth provider is replaced.
+- Backend: Python 3.12 plus the locked FastAPI/Uvicorn, SQLAlchemy/Alembic, `psycopg`, Google Cloud Storage, OpenAI, PyJWT, PyPDF and multipart dependencies. The Clerk JWT verifier is implemented; the Modal SDK/deployment entrypoint remains separate work.
+- Frontend: Node 20 build runtime with React 18, Vite and `@clerk/clerk-react`. The retired browser authentication SDK has been removed.
 - SMTP uses Python’s standard library and needs no extra package. GCS remains the only package-media provider, so the unused `MINIO_*` example settings are not dependencies.
 - Keep `uv.lock` and `frontend/package-lock.json` as the reproducible dependency sources for image and frontend builds. Any dependency change required by the Clerk/Modal work must update the appropriate lockfile.
 
@@ -61,7 +61,7 @@ Use a stable Vercel development/preview hostname when possible. Commit-specific 
 | `SMTP_HOST`, `SMTP_PORT`, `SMTP_USE_TLS`, `SMTP_FROM_EMAIL`, `CONTACT_TO_EMAIL` | contact-email sender | Required for working contact form; port is an integer and TLS is normally `true` | Modal Secret `letsgosa-smtp-{env}` (grouped with SMTP credentials) |
 | `SMTP_USERNAME`, `SMTP_PASSWORD` | contact-email sender | Conditional pair: set both when the SMTP relay authenticates; password is secret | Modal Secret `letsgosa-smtp-{env}` |
 
-The current defaults for `LETSGOSA_APP_NAME`, `LETSGOSA_API_PREFIX`, `LETSGOSA_API_VERSION`, host, port and debug are sufficient; Modal ASGI serving does not need the legacy Cloud Run `PORT` setting. `DATABASE_URL` and `LETSGOSA_CORS_ALLOW_ORIGINS` remain aliases in application code but must not be used in the rebuild. `CLOUD_SQL_CONNECTION_NAME`, `FIREBASE_*`, `MINIO_*`, and `CONVERSATION_STORAGE_DIR` are legacy/non-target settings.
+The current defaults for `LETSGOSA_APP_NAME`, `LETSGOSA_API_PREFIX`, `LETSGOSA_API_VERSION`, host, port and debug are sufficient. Compatibility aliases are intentionally ignored; only the canonical names in the environment matrix are consumed.
 
 The GCS credential variable above requires a small Modal entrypoint step because Google ADC consumes a credential **file path**, not raw JSON. A keyless workload identity is preferable later but is not a minimum dependency.
 
@@ -77,7 +77,7 @@ The GCS credential variable above requires a small Modal entrypoint step because
 
 Every `VITE_*` value is embedded in browser JavaScript and is therefore public. Never put `CLERK_SECRET_KEY`, database credentials, SMTP credentials, OpenAI credentials, or GCP private keys in Vercel `VITE_*` variables. The Clerk React quickstart uses `VITE_CLERK_PUBLISHABLE_KEY` ([Clerk React](https://clerk.com/docs/react/getting-started/quickstart)).
 
-Replace the hard-coded Cloud Run production fallback in `frontend/src/api/client.js`; production must fail the build or startup if `VITE_API_BASE_URL` is missing. Add a Vercel SPA rewrite because React Router owns `/packages/*` and `/admin/*`.
+The frontend now has no deployed API fallback and fails non-development builds when `VITE_API_BASE_URL` is missing or invalid. A Vercel SPA rewrite remains deployment work because React Router owns `/packages/*` and `/admin/*`.
 
 ### Secrets owned outside the runtimes
 
@@ -157,8 +157,8 @@ Deleting an individual image already deletes its GCS object. Deleting a package 
 
 The repository does not yet implement Clerk. Before deployment:
 
-- frontend: replace `firebase` with `@clerk/react`, wrap the app in `ClerkProvider`, obtain a fresh session token, and continue sending it as `Authorization: Bearer <token>` for protected API calls;
-- backend: replace `firebase-admin`/ADC verification with Clerk session-token verification; validate signature, algorithm, expiry/not-before, issuer and exact `azp`/authorized party, then map `sub`, name/email and claims into `AuthenticatedUser`;
+- frontend: `ClerkProvider` obtains fresh session tokens and sends `Authorization: Bearer <token>` for protected API calls;
+- backend: Clerk session-token verification validates signature, algorithm, expiry/not-before, issuer and exact `azp`/authorized party, then maps `sub`, name/email and claims into `AuthenticatedUser`;
 - authorization: keep all `/api/admin/**` operations server-protected and require the boolean custom session claim `admin == true`. Hiding UI alone is not authorization. Clerk recommends checking `authorizedParties` for cross-origin bearer sessions ([manual JWT verification](https://clerk.com/docs/guides/sessions/manual-jwt-verification)).
 
 Configure each Clerk instance with:
@@ -197,7 +197,7 @@ Keep only the legacy resources needed to operate and roll back the current site 
 
 - current Cloud Run backend and its attached runtime secrets/build artifact;
 - current Firebase Hosting site and Firebase Authentication application/admin identities;
-- current Cloud SQL instance (known connection name `letsgodb:us-central1:free-trial-first-project`);
+- current legacy managed PostgreSQL instance and connection metadata;
 - current package-image GCS bucket (known as `letsgosa-package-images`) while the old frontend/backend can still reference it;
 - current DNS records/domains.
 
@@ -206,7 +206,7 @@ This is a continuity list, not an infrastructure inventory. Do not copy Cloud SQ
 ## Assumptions and unresolved work
 
 - Accepted: GCS is the final object-storage service for this rebuild; old objects are not migrated.
-- Required application work: Modal deployment entrypoint, Clerk frontend/backend adapters, removal of hard-coded Firebase/Cloud Run fallbacks, Vercel SPA rewrite, GCS conversation store, and package-image orphan cleanup.
+- Required application work: Modal deployment entrypoint, Vercel SPA rewrite, GCS conversation store, and package-image orphan cleanup.
 - Required schema follow-up: resolve the documented itinerary unique-constraint/composite-index metadata drift with a forward migration or matching ORM declaration before production content entry.
 - Infrastructure decision still required: how Modal reaches Azure securely (approved public endpoint/firewall path versus a private networking design). Whatever is selected must support both runtime and migration jobs and preserve TLS hostname verification.
 - Operational decisions still required: final domains, stable preview origin, Azure PostgreSQL version/SKU/networking, exact bucket names/regions, GCS retention/versioning, SMTP provider, and whether a custom Modal API domain is purchased. These are deliberately represented by configuration names, not guessed values.

@@ -9,6 +9,7 @@ import { getCurrentAdmin } from "../../lib/adminApi";
 import { formatCurrency } from "../../lib/formatters";
 
 function formatStatusLabel(status) {
+  // Convert API status identifiers into readable labels.
   return status
     .toLowerCase()
     .split("_")
@@ -17,6 +18,7 @@ function formatStatusLabel(status) {
 }
 
 export function Dashboard() {
+  // Load protected profile and package data for the admin overview.
   const { user, isAdmin, adminClaimName, logout } = useAuth();
   const [packages, setPackages] = useState([]);
   const [profile, setProfile] = useState(null);
@@ -27,6 +29,7 @@ export function Dashboard() {
     let isMounted = true;
 
     async function loadAdminData() {
+      // Fetch independent dashboard resources together to reduce load time.
       try {
         const [profilePayload, packagesPayload] = await Promise.all([
           getCurrentAdmin(),
@@ -82,23 +85,23 @@ export function Dashboard() {
             </div>
 
             <p>
-              This page validates the Firebase session, refreshes the ID token
+              This page validates the Clerk session, refreshes the token
               when needed, and calls protected admin endpoints with
-              <code> Authorization: Bearer &lt;Firebase ID token&gt;</code>.
+              <code> Authorization: Bearer &lt;Clerk session token&gt;</code>.
             </p>
 
             <div className="admin-summary-grid">
               <article className="detail-panel">
                 <span className="eyebrow-dark">Signed in as</span>
                 <h3>{profile?.username || user?.username || "Admin"}</h3>
-                <p>{profile?.email || user?.email || "No email returned from Firebase."}</p>
+                <p>{profile?.email || user?.email || "No email returned from Clerk."}</p>
               </article>
 
               <article className="detail-panel">
                 <span className="eyebrow-dark">Admin claim</span>
                 <h3>{isAdmin ? "Granted" : "Missing"}</h3>
                 <p>
-                  The backend only serves admin data when the Firebase custom claim
+                  The backend only serves admin data when the Clerk session claim
                   <code> {adminClaimName}: true</code> is present.
                 </p>
               </article>

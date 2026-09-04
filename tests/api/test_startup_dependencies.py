@@ -3,7 +3,7 @@ from __future__ import annotations
 from app.main import create_application
 from fastapi.testclient import TestClient
 
-from tests.api.firebase_auth_helpers import build_test_settings
+from tests.api.clerk_auth_helpers import build_test_settings
 
 
 def test_application_startup_does_not_require_external_credentials(
@@ -15,18 +15,10 @@ def test_application_startup_does_not_require_external_credentials(
     def _fail_client_creation(*args, **kwargs):
         raise AssertionError("storage client should not be created during startup")
 
-    def _fail_firebase_init(*args, **kwargs):
-        raise AssertionError("firebase app should not be initialized during startup")
-
     monkeypatch.setattr(
         "app.infrastructure.storage.gcs_storage.Client",
         _fail_client_creation,
     )
-    monkeypatch.setattr(
-        "app.main.initialize_firebase_app",
-        _fail_firebase_init,
-    )
-
     with TestClient(application) as client:
         response = client.get("/health")
 

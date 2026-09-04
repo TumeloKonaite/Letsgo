@@ -49,7 +49,7 @@ No other frontend key is approved. In particular, private/admin Clerk keys and a
 
 | Variable | Purpose / value shape | Envs | Exposure and runtime | Owner / consumer | Provisioned by | Req. | Rotation |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `LETSGOSA_ENV` | Exact tier name: `development`, `staging`, or `production`; S/P must use managed PostgreSQL and production-safe settings even while the current guard recognizes only `production` | D/S/P | Internal; web and jobs | Modal config / application settings | Deployment owner | Required | R1 |
+| `LETSGOSA_ENV` | Exact deployed tier name: `development`, `staging`, or `production`; `test` is accepted only for explicit automated-test fixtures | D/S/P | Internal; web and jobs | Modal config / application settings | Deployment owner | Required | R1 |
 | `LETSGOSA_DATABASE_URL` | Complete `postgresql+psycopg://...` URL with Azure host, database, role and certificate-verifying TLS options | D/S/P | Secret; web or job, never browser | Modal database Secret / SQLAlchemy and Alembic | Azure creates role credential; deployment owner assembles URL | Required | R3 |
 | `CORS_ORIGINS` | Comma-separated exact frontend origins; never `*` | D/S/P | Internal; FastAPI web only | Modal config / CORS middleware | Vercel domain output plus security owner | Required | R1 |
 | `CLERK_SECRET_KEY` | Environment-specific Clerk Backend API/verification credential | D/S/P | Secret; FastAPI web only | Modal Clerk Secret / backend auth adapter | Clerk | Required | R2 |
@@ -63,8 +63,8 @@ No other frontend key is approved. In particular, private/admin Clerk keys and a
 | `GCS_BUCKET_NAME` | Matching public package-image bucket name | D/S/P | Internal; web and image-cleanup job | Modal config / package storage adapter | GCP/GCS | Required | R1 |
 | `GCS_PUBLIC_BASE_URL` | HTTPS public/CDN base, no trailing slash | D/S/P | Public data but server-configured; web URL builder | Modal config / package storage adapter | GCP/GCS or CDN | Required | R1 |
 | `GCS_CONVERSATION_BUCKET_NAME` | Matching private conversation bucket | D/S/P | Internal; web and retention job | Modal config / planned GCS conversation store | GCP/GCS | Required before deployed chat persistence | R1 |
-| `GCP_SERVICE_ACCOUNT_JSON` | New least-privilege JSON credential for only the matching buckets | D/S/P | Secret; web and GCS jobs | Modal GCS Secret / credential bootstrap | GCP IAM | Required until approved keyless federation exists | R5 |
-| `GOOGLE_APPLICATION_CREDENTIALS` | Path to ephemeral credential file created from the preceding secret at container start | D/S/P | Internal runtime-generated path; web/jobs | Modal container environment / Google client library | Modal entrypoint | Required with JSON-key auth; never store the JSON here | R5 |
+| `GCP_SERVICE_ACCOUNT_JSON` | New least-privilege JSON credential for only the matching buckets | D/S/P | Secret; web and GCS jobs | Modal GCS Secret / storage adapter | GCP IAM | Required unless an explicit credential file is used | R5 |
+| `GOOGLE_APPLICATION_CREDENTIALS` | Path to an explicitly supplied credential file | D/S/P | Internal path; web/jobs | Runtime environment / Google client library | Deployment owner | Alternative to the JSON variable; absolute path in S/P | R5 |
 | `PACKAGE_IMAGE_MAX_UPLOAD_BYTES` | Maximum accepted image bytes; default `5242880` | D/S/P | Internal; FastAPI web | Modal config / upload validation | Application owner | Optional | R1 |
 | `OPENAI_API_KEY` | Environment/project-scoped key for chatbot inference | D/S/P | Secret; FastAPI web only | Modal OpenAI Secret / LLM client | OpenAI project owner | Required for chat | R6 |
 | `OPENAI_MODEL` | Approved model identifier; current default `gpt-4o-mini` | D/S/P | Internal; FastAPI web | Modal config / LLM client | Application owner | Optional | R1 |
@@ -76,7 +76,7 @@ No other frontend key is approved. In particular, private/admin Clerk keys and a
 | `SMTP_PASSWORD` | Relay password/token | D/S/P | Secret; FastAPI contact flow | Modal SMTP Secret / email sender | SMTP provider | Conditional if relay authenticates | R7 |
 | `SMTP_FROM_EMAIL` | Approved sender address | D/S/P | Confidential; FastAPI contact flow | Modal SMTP Secret / email sender | SMTP/domain owner | Required for contact email | R7 |
 | `CONTACT_TO_EMAIL` | Destination mailbox | D/S/P | Confidential; FastAPI contact flow | Modal SMTP Secret / email sender | Business owner | Required for contact email | R7 |
-| `SMTP_USE_TLS` | Whether to start TLS; `true` unless provider explicitly requires another secure mode | D/S/P | Internal; FastAPI contact flow | Modal SMTP Secret / email sender | SMTP provider | Required for contact email | R7 |
+| `SMTP_USE_TLS` | Whether to start TLS; set explicitly (`true` unless the provider requires another secure mode) | D/S/P | Internal; FastAPI contact flow | Modal SMTP Secret / email sender | SMTP provider | Required for contact email | R7 |
 | `CONTENT_DATA_DIR` | Read-only path to image-baked chatbot resources, such as `/app/data` | D/S/P | Internal; FastAPI web | Modal config / resource loader | Backend image | Required | R1 |
 | `CONVERSATION_STORAGE_DIR` | Local file fallback, such as `data/conversations` | D only | Internal; local FastAPI only | Ignored local `.env` / file conversation store | Developer | Optional transition setting; forbidden on deployed Modal | R1 |
 | `LETSGOSA_APP_NAME` | API display name; code default is sufficient | D/S/P | Internal; FastAPI metadata | Modal config / FastAPI | Application owner | Optional | R1 |
@@ -89,14 +89,14 @@ The following code-recognized keys are deliberately excluded from the clean-star
 | Key(s) | Classification and action |
 | --- | --- |
 | `LETSGOSA_HOST`, `LETSGOSA_PORT`, `PORT` | Process/platform settings; Modal's ASGI serving owns these, so do not configure them |
-| `ENVIRONMENT`, `DATABASE_URL`, `LETSGOSA_CORS_ALLOW_ORIGINS`, `GOOGLE_CLOUD_PROJECT` | Compatibility aliases; use only the canonical matrix names |
+| `ENVIRONMENT`, `DATABASE_URL`, `LETSGOSA_CORS_ALLOW_ORIGINS`, `GOOGLE_CLOUD_PROJECT` | Retired aliases; the application intentionally ignores them |
 | `CLOUD_SQL_CONNECTION_NAME` | Retired Cloud SQL setting; never configure for Azure |
-| `FIREBASE_PROJECT_ID`, `FIREBASE_ADMIN_ROLE` | Retired backend Firebase Auth settings; remove their consumers during Clerk migration |
-| `VITE_FIREBASE_API_KEY`, `VITE_FIREBASE_AUTH_DOMAIN`, `VITE_FIREBASE_PROJECT_ID`, `VITE_FIREBASE_APP_ID`, `VITE_FIREBASE_STORAGE_BUCKET`, `VITE_FIREBASE_MESSAGING_SENDER_ID`, `VITE_FIREBASE_ADMIN_CLAIM` | Retired browser Firebase settings; never add them to Vercel clean-start scopes |
+| `FIREBASE_PROJECT_ID`, `FIREBASE_ADMIN_ROLE` | Retired backend settings; the application intentionally ignores them |
+| `VITE_FIREBASE_API_KEY`, `VITE_FIREBASE_AUTH_DOMAIN`, `VITE_FIREBASE_PROJECT_ID`, `VITE_FIREBASE_APP_ID`, `VITE_FIREBASE_STORAGE_BUCKET`, `VITE_FIREBASE_MESSAGING_SENDER_ID`, `VITE_FIREBASE_ADMIN_CLAIM` | Retired browser settings; the frontend build rejects them |
 | `VITE_LETSGO_API_BASE_URL` | Retired frontend API URL alias; use `VITE_API_BASE_URL` |
 | `MINIO_ENDPOINT`, `MINIO_ACCESS_KEY`, `MINIO_SECRET_KEY`, `MINIO_BUCKET`, `MINIO_SECURE` | Unused object-storage alternative; GCS is selected |
 
-The repository still contains Firebase authentication adapters and a hard-coded Cloud Run frontend fallback. The separate Clerk/Modal implementation work must remove those consumers and make required clean-start variables fail closed before any infrastructure is provisioned. This matrix defines that implementation's contract; it does not claim the legacy application already consumes every target key.
+The application consumes the canonical keys above and validates them before backend startup or frontend build. Local defaults are restricted to development; staging and production fail closed.
 
 Use two Modal database Secrets containing the same environment-variable name but different Azure roles. Bind `letsgosa-database-{env}-runtime` only to the web service and data-maintenance jobs; bind `letsgosa-database-{env}-migration` only to the one-off Alembic release job. Never attach both to one function. Scheduled GCS retention/orphan cleanup receives only the runtime database group and GCS group. No job receives Clerk, OpenAI, or SMTP secrets unless its code directly consumes them.
 
@@ -114,7 +114,7 @@ CI tests use committed synthetic values such as `example.invalid` and SQLite; th
 | `VERCEL_ORG_ID` | Vercel team identifier for CLI deploy | D/S/P | Internal; GitHub frontend deploy job | GitHub Environment variable / Vercel CLI | Vercel | Conditional with `VERCEL_TOKEN` | R1 |
 | `VERCEL_PROJECT_ID` | Vercel project identifier for CLI deploy | D/S/P | Internal; GitHub frontend deploy job | GitHub Environment variable / Vercel CLI | Vercel | Conditional with `VERCEL_TOKEN` | R1 |
 
-Grant each Modal service user Contributor access to only its matching environment. Use three service users/tokens; do not give a development token access to production. Vercel's native GitHub integration should build/deploy the frontend and read build variables directly from Vercel, eliminating GitHub copies. The current Cloud Run/Firebase deployment workflows are legacy and must be replaced before clean-start deployment; their `WORKLOAD_IDENTITY_PROVIDER`, `GCP_SERVICE_ACCOUNT`, `FIREBASE_SERVICE_ACCOUNT_LETSGODB`, Cloud Run, Artifact Registry, and Firebase Hosting settings are not part of this matrix.
+Grant each Modal service user Contributor access to only its matching environment. Use three service users/tokens; do not give a development token access to production. Vercel's native GitHub integration should build/deploy the frontend and read build variables directly from Vercel, eliminating GitHub copies. Legacy deployment workflows were removed; replacement deployment automation is separate work.
 
 ### Provider-managed settings without application environment variables
 

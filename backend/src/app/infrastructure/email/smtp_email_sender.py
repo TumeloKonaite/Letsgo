@@ -8,17 +8,20 @@ from app.infrastructure.email.base import EmailDeliveryError
 
 
 class SMTPEmailSender:
+    """Deliver contact enquiries through the configured SMTP relay."""
+
     def __init__(
         self,
         host: str | None,
-        port: int,
+        port: int | None,
         username: str | None,
         password: str | None,
         from_email: str | None,
         to_email: str | None,
-        use_tls: bool,
+        use_tls: bool | None,
         timeout_seconds: float = 10.0,
     ) -> None:
+        """Store SMTP connection and message-routing settings."""
         self._host = host
         self._port = port
         self._username = username
@@ -29,6 +32,7 @@ class SMTPEmailSender:
         self._timeout_seconds = timeout_seconds
 
     def send_contact_request(self, submission: ContactSubmission) -> None:
+        """Build and send one contact enquiry, hiding provider error details."""
         self._validate_configuration()
         message = self._build_message(submission)
 
@@ -49,6 +53,7 @@ class SMTPEmailSender:
             raise EmailDeliveryError("Unable to send contact request.") from exc
 
     def _build_message(self, submission: ContactSubmission) -> EmailMessage:
+        """Convert a contact submission into a plain-text email message."""
         message = EmailMessage()
         message["Subject"] = f"LetsGoSouth contact enquiry: {submission.subject}"
         message["From"] = self._from_email
@@ -73,11 +78,14 @@ class SMTPEmailSender:
         return message
 
     def _validate_configuration(self) -> None:
+        """Ensure the SMTP adapter is complete before opening a connection."""
         if not self._host or not self._from_email or not self._to_email:
             raise EmailDeliveryError("Unable to send contact request.")
-        if self._port <= 0:
+        if self._port is None or self._port <= 0:
             raise EmailDeliveryError("Unable to send contact request.")
         if self._timeout_seconds <= 0:
             raise EmailDeliveryError("Unable to send contact request.")
         if bool(self._username) != bool(self._password):
+            raise EmailDeliveryError("Unable to send contact request.")
+        if self._use_tls is None:
             raise EmailDeliveryError("Unable to send contact request.")
