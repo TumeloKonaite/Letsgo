@@ -2,7 +2,7 @@
 
 LetsGoSouth is a FastAPI backend with a React/Vite public frontend for browsing published South African travel packages.
 
-The clean-start Modal, Vercel, Clerk, Azure PostgreSQL and GCS dependency contract is documented in [docs/rebuild-dependencies.md](docs/rebuild-dependencies.md).
+The authoritative clean-start configuration and secret contract for Modal, Vercel, Clerk, Azure PostgreSQL, GitHub Actions and GCS is [docs/environment-secrets.md](docs/environment-secrets.md). The broader deployment dependency contract is documented in [docs/rebuild-dependencies.md](docs/rebuild-dependencies.md).
 
 ## Backend setup
 
