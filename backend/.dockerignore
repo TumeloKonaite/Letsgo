@@ -26,3 +26,14 @@ htmlcov/
 Dockerfile
 docker-compose.yml
 README.md
+
+.env
+.env.*
+**/.env
+**/.env.*
+**/*credentials*.json
+**/*service-account*.json
+**/*.pem
+**/*.key
+.git
+.venv

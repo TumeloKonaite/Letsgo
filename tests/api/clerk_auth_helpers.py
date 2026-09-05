@@ -49,6 +49,7 @@ def build_test_settings(database_url: str, **overrides) -> Settings:
         "clerk_admin_claim": TEST_CLERK_ADMIN_CLAIM,
         "storage_provider": "gcs",
         "gcp_project_id": "test-project",
+        "gcs_object_prefix": "staging/",
         "gcs_bucket_name": "test-package-images",
         "gcs_public_base_url": "https://storage.example.invalid/images",
     }

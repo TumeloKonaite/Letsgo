@@ -1,3 +1,5 @@
+> Storage update: [private Modal GCS runbook](modal-gcs-storage.md) supersedes all public-bucket, credential-file materialization, and key-first assumptions below. Retain the existing bucket; do not create replacement buckets or grant public access.
+
 # Environment and secret matrix
 
 Status: authoritative clean-start configuration input. Repository alignment reviewed 2026-09-04. Infrastructure owners must complete the review gate at the end of this document before provisioning.

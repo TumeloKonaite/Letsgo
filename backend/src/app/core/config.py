@@ -234,6 +234,10 @@ class Settings:
     clerk_webhook_signing_secret: str | None = field(default=None, repr=False)
     storage_provider: str = ""
     gcp_project_id: str | None = None
+    gcs_object_prefix: str = ""
+    gcs_credentials_secret_name: str | None = None
+    gcs_wif_audience: str | None = None
+    gcs_service_account_email: str | None = None
     gcs_bucket_name: str | None = None
     gcs_public_base_url: str | None = None
     gcs_conversation_bucket_name: str | None = None
@@ -296,7 +300,12 @@ class Settings:
             clerk_admin_claim=_optional_env("CLERK_ADMIN_CLAIM"),
             clerk_webhook_signing_secret=_optional_env("CLERK_WEBHOOK_SIGNING_SECRET"),
             storage_provider=_optional_env("STORAGE_PROVIDER") or "",
-            gcp_project_id=_optional_env("GCP_PROJECT_ID"),
+            gcp_project_id=_optional_env("GCS_PROJECT_ID")
+            or _optional_env("GCP_PROJECT_ID"),
+            gcs_object_prefix=_optional_env("GCS_OBJECT_PREFIX") or "",
+            gcs_credentials_secret_name=_optional_env("GCS_CREDENTIALS_SECRET_NAME"),
+            gcs_wif_audience=_optional_env("GCS_WIF_AUDIENCE"),
+            gcs_service_account_email=_optional_env("GCS_SERVICE_ACCOUNT_EMAIL"),
             gcs_bucket_name=_optional_env("GCS_BUCKET_NAME"),
             gcs_public_base_url=_optional_env("GCS_PUBLIC_BASE_URL"),
             gcs_conversation_bucket_name=_optional_env("GCS_CONVERSATION_BUCKET_NAME"),
@@ -432,26 +441,51 @@ class Settings:
             (
                 ("GCP_PROJECT_ID", self.gcp_project_id),
                 ("GCS_BUCKET_NAME", self.gcs_bucket_name),
-                ("GCS_PUBLIC_BASE_URL", self.gcs_public_base_url),
+                ("GCS_OBJECT_PREFIX", self.gcs_object_prefix),
             ),
         )
-        assert self.gcs_public_base_url
-        _validate_http_url(
-            "GCS_PUBLIC_BASE_URL",
-            self.gcs_public_base_url,
-            https_only=self.is_deployed,
-        )
-        if self.gcs_public_base_url.endswith("/"):
+        if not re.fullmatch(
+            r"[a-zA-Z0-9_-]+(?:/[a-zA-Z0-9_-]+)*/", self.gcs_object_prefix
+        ):
             raise ConfigurationError(
-                "GCS_PUBLIC_BASE_URL must not have a trailing slash"
+                "GCS_OBJECT_PREFIX must contain safe segments and end in '/'"
             )
+        if self.gcs_wif_audience:
+            if not re.fullmatch(
+                r"//iam.googleapis.com/projects/[0-9]+/locations/global/workloadIdentityPools/[a-zA-Z0-9_-]+/providers/[a-zA-Z0-9_-]+",
+                self.gcs_wif_audience,
+            ):
+                raise ConfigurationError("GCS_WIF_AUDIENCE has an invalid format")
+            if (
+                not self.gcs_service_account_email
+                or not self.gcs_service_account_email.endswith(
+                    ".iam.gserviceaccount.com"
+                )
+            ):
+                raise ConfigurationError(
+                    "GCS_SERVICE_ACCOUNT_EMAIL is required for federation"
+                )
+        if (
+            sum(
+                bool(value)
+                for value in (
+                    self.gcs_wif_audience,
+                    self.gcp_service_account_json,
+                    self.google_application_credentials,
+                )
+            )
+            > 1
+        ):
+            raise ConfigurationError("Configure exactly one GCS credential source")
         bucket_pattern = re.compile(r"^[a-z0-9][a-z0-9._-]{1,220}[a-z0-9]$")
         if not self.gcs_bucket_name or not bucket_pattern.fullmatch(
             self.gcs_bucket_name
         ):
             raise ConfigurationError("GCS_BUCKET_NAME has an invalid format")
         if self.normalized_environment != "test" and not (
-            self.gcp_service_account_json or self.google_application_credentials
+            self.gcs_wif_audience
+            or self.gcp_service_account_json
+            or self.google_application_credentials
         ):
             raise ConfigurationError(
                 "Missing required GCS credentials: set GCP_SERVICE_ACCOUNT_JSON "

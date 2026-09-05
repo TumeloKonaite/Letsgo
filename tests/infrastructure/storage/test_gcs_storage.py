@@ -20,10 +20,19 @@ class FakeBlob:
     delete_error: Exception | None = None
     deleted: bool = False
 
-    def upload_from_file(self, file_obj, *, size: int, content_type: str) -> None:
-        if self.upload_error is not None:
+    def upload_from_string(self, content, *, content_type, if_generation_match):
+        assert if_generation_match == 0
+        if self.upload_error:
             raise self.upload_error
-        self.uploads.append((self.object_name, file_obj.read(), size, content_type))
+        self.uploads.append((self.object_name, content, len(content), content_type))
+
+    def generate_signed_url(self, **kwargs):
+        assert kwargs["method"] == "GET"
+        return (
+            "https://storage.googleapis.com/letsgosa-package-images/"
+            + self.object_name
+            + "?signature=synthetic"
+        )
 
     def delete(self) -> None:
         if self.delete_error is not None:
@@ -65,7 +74,7 @@ def _build_service(bucket: FakeBucket) -> GcsStorageService:
     return GcsStorageService(
         project_id="test-project",
         bucket_name="letsgosa-package-images",
-        public_base_url="https://cdn.example.invalid/images",
+        object_prefix="staging/",
         client=FakeGcsClient(bucket),
     )
 
@@ -80,11 +89,16 @@ def test_upload_image_succeeds() -> None:
         "image/jpeg",
     )
 
-    assert bucket.blobs["packages/cape-town-tour/photo.jpg"].uploads == [
-        ("packages/cape-town-tour/photo.jpg", b"\xff\xd8\xfftest", 7, "image/jpeg")
+    assert bucket.blobs["staging/packages/cape-town-tour/photo.jpg"].uploads == [
+        (
+            "staging/packages/cape-town-tour/photo.jpg",
+            b"\xff\xd8\xfftest",
+            7,
+            "image/jpeg",
+        )
     ]
     assert stored_object.url == (
-        "https://cdn.example.invalid/images/packages/cape-town-tour/photo.jpg"
+        "https://storage.googleapis.com/letsgosa-package-images/staging/packages/cape-town-tour/photo.jpg"
     )
 
 
@@ -92,14 +106,14 @@ def test_delete_image_succeeds() -> None:
     bucket = FakeBucket(name="letsgosa-package-images")
     storage = _build_service(bucket)
 
-    storage.delete_image("packages/cape-town-tour/photo.jpg")
+    storage.delete_image("staging/packages/cape-town-tour/photo.jpg")
 
-    assert bucket.blobs["packages/cape-town-tour/photo.jpg"].deleted is True
+    assert bucket.blobs["staging/packages/cape-town-tour/photo.jpg"].deleted is True
 
 
 def test_invalid_credentials_fail_gracefully() -> None:
     bucket = FakeBucket(
-        name="letsgosa-package-images", exists_error=Forbidden("denied")
+        name="letsgosa-package-images", blob_upload_error=Forbidden("denied")
     )
     storage = _build_service(bucket)
 
@@ -112,7 +126,9 @@ def test_invalid_credentials_fail_gracefully() -> None:
 
 
 def test_missing_bucket_returns_specific_error() -> None:
-    bucket = FakeBucket(name="letsgosa-package-images", exists_result=False)
+    bucket = FakeBucket(
+        name="letsgosa-package-images", blob_upload_error=NotFound("missing")
+    )
     storage = _build_service(bucket)
 
     with pytest.raises(StorageBucketNotFoundError):
@@ -129,20 +145,22 @@ def test_extract_object_name_supports_public_bucket_urls() -> None:
 
     assert (
         storage.extract_object_name(
-            "https://cdn.example.invalid/images/packages/cape-town-tour/photo.jpg"
+            "https://storage.googleapis.com/letsgosa-package-images/staging/packages/cape-town-tour/photo.jpg?signature=synthetic"
         )
-        == "packages/cape-town-tour/photo.jpg"
+        == "staging/packages/cape-town-tour/photo.jpg"
     )
 
 
 def test_network_errors_are_wrapped_as_storage_errors() -> None:
     bucket = FakeBucket(
-        name="letsgosa-package-images", exists_error=OSError("connection refused")
+        name="letsgosa-package-images", blob_upload_error=OSError("connection refused")
     )
     storage = _build_service(bucket)
 
-    with pytest.raises(StorageError, match="Storage request failed: OSError."):
-        storage.upload_image("packages/cape-town-tour/photo.jpg", b"data", "image/jpeg")
+    with pytest.raises(StorageError, match="Image storage unavailable"):
+        storage.upload_image(
+            "staging/packages/cape-town-tour/photo.jpg", b"data", "image/jpeg"
+        )
 
 
 def test_missing_object_delete_is_ignored() -> None:
@@ -151,4 +169,81 @@ def test_missing_object_delete_is_ignored() -> None:
     )
     storage = _build_service(bucket)
 
-    storage.delete_image("packages/cape-town-tour/photo.jpg")
+    storage.delete_image("staging/packages/cape-town-tour/photo.jpg")
+
+
+@pytest.mark.parametrize("name", ["other/x.jpg", "staging/../x.jpg", "staging//x.jpg"])
+def test_rejects_outside_prefix(name):
+    storage = _build_service(FakeBucket(name="letsgosa-package-images"))
+    with pytest.raises(StorageError):
+        storage.delete_image(name)
+    with pytest.raises(StorageError):
+        storage.get_public_url(name)
+
+
+def test_client_auth_error_is_sanitized():
+    from google.auth.exceptions import RefreshError
+
+    def fail():
+        raise RefreshError("sensitive provider response")
+
+    storage = GcsStorageService(
+        project_id="test",
+        bucket_name="test-bucket",
+        object_prefix="staging/",
+        client_factory=fail,
+    )
+    with pytest.raises(
+        StorageAuthenticationError, match="^Image storage unavailable$"
+    ) as error:
+        storage.delete_image("staging/x.jpg")
+    assert error.value.__suppress_context__
+
+
+def test_private_url_is_signed_on_read():
+    storage = _build_service(FakeBucket(name="letsgosa-package-images"))
+    assert "?signature=" in storage.get_public_url("staging/packages/x.jpg")
+
+
+def test_modal_supplier_does_not_fall_back(monkeypatch):
+    from app.infrastructure.storage.gcs_storage import ModalTokenSupplier
+    from google.auth.exceptions import GoogleAuthError
+
+    monkeypatch.delenv("MODAL_IDENTITY_TOKEN", raising=False)
+    with pytest.raises(GoogleAuthError):
+        ModalTokenSupplier().get_subject_token(None, None)
+    monkeypatch.setenv("MODAL_IDENTITY_TOKEN", "synthetic")
+    assert ModalTokenSupplier().get_subject_token(None, None) == "synthetic"
+
+
+def test_factory_uses_explicit_federation(monkeypatch):
+    from app.core.config import Settings
+    from app.infrastructure.storage import gcs_storage
+
+    captured = {}
+
+    def credentials(**kwargs):
+        captured.update(kwargs)
+        return object()
+
+    monkeypatch.setattr(gcs_storage.identity_pool, "Credentials", credentials)
+    bucket = FakeBucket(name="letsgosa-package-images")
+    monkeypatch.setattr(gcs_storage, "Client", lambda **kwargs: FakeGcsClient(bucket))
+    settings = Settings(
+        environment="staging",
+        storage_provider="gcs",
+        gcp_project_id="test-project",
+        gcs_bucket_name=bucket.name,
+        gcs_object_prefix="staging/",
+        gcs_wif_audience="//iam.googleapis.com/projects/123/locations/global/workloadIdentityPools/modal/providers/staging",
+        gcs_service_account_email="modal-staging@test-project.iam.gserviceaccount.com",
+    )
+    storage = gcs_storage.create_storage_service(settings)
+    storage.upload_image("packages/x.jpg", b"data", "image/jpeg")
+    assert captured["audience"] == settings.gcs_wif_audience
+    assert isinstance(
+        captured["subject_token_supplier"], gcs_storage.ModalTokenSupplier
+    )
+    assert captured["service_account_impersonation_url"].endswith(
+        settings.gcs_service_account_email + ":generateAccessToken"
+    )

@@ -30,6 +30,7 @@ def valid_settings(**overrides) -> config.Settings:
         "storage_provider": "gcs",
         "gcp_project_id": "test-project",
         "gcs_bucket_name": "test-images",
+        "gcs_object_prefix": "staging/",
         "gcs_public_base_url": "https://storage.example.invalid/images",
     }
     values.update(overrides)
@@ -256,3 +257,27 @@ def test_partial_smtp_credentials_are_rejected() -> None:
         replace(
             valid_settings(), smtp_username="mailer", smtp_password=None
         ).validate_integrations()
+
+
+@pytest.mark.parametrize(
+    "prefix", ["", "/staging/", "staging", "staging/../", "staging//"]
+)
+def test_storage_prefix_validation(prefix):
+    with pytest.raises(config.ConfigurationError):
+        replace(
+            valid_settings(), gcs_object_prefix=prefix
+        ).validate_storage_configuration()
+
+
+def test_federation_configuration():
+    settings = replace(
+        valid_settings(),
+        google_application_credentials=None,
+        gcs_wif_audience="//iam.googleapis.com/projects/123/locations/global/workloadIdentityPools/modal/providers/staging",
+        gcs_service_account_email="modal-staging@test-project.iam.gserviceaccount.com",
+    )
+    settings.validate_storage_configuration()
+    with pytest.raises(config.ConfigurationError, match="exactly one"):
+        replace(
+            settings, google_application_credentials="/run/secrets/credentials.json"
+        ).validate_storage_configuration()
