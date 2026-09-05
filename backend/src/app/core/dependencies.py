@@ -9,10 +9,10 @@ from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session
 
-from app.domain.auth.provider import AuthenticationError, AuthenticationProvider
 from app.chatbot.service import TwinService
 from app.core.config import Settings
 from app.domain.auth.models import AuthenticatedUser
+from app.domain.auth.provider import AuthenticationError, AuthenticationProvider
 from app.domain.bookings.repository import BookingRepository
 from app.domain.bookings.service import BookingService
 from app.domain.contact.repository import ContactRepository
