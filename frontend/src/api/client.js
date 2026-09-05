@@ -1,3 +1,5 @@
+// Centralize HTTP requests, bearer token retrieval, and API error normalization.
+
 import { resolveFrontendEnvironment } from "../../config/environment";
 
 export const apiBaseUrl = resolveFrontendEnvironment(
@@ -88,7 +90,7 @@ export function configureApiClient({
   getAccessToken: nextGetAccessToken = null,
   onUnauthorized: nextOnUnauthorized = null,
 } = {}) {
-  // Register the active Clerk token provider and unauthorized callback.
+  // Register token retrieval without coupling the HTTP client to an auth SDK.
   getAccessToken = nextGetAccessToken;
   handleUnauthorized = nextOnUnauthorized;
 }

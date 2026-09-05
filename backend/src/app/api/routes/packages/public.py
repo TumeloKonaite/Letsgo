@@ -1,3 +1,5 @@
+"""Expose published packages by slug without granting access to admin records."""
+
 from __future__ import annotations
 
 from typing import Annotated

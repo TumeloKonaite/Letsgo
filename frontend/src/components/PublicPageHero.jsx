@@ -1,3 +1,5 @@
+// Provide a consistent hero layout with optional actions for public pages.
+
 import { useEffect, useState } from "react";
 
 const defaultSlides = [

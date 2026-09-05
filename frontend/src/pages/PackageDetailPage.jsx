@@ -1,3 +1,5 @@
+// Load a published package by slug and present its gallery and trip details.
+
 import { Link, useParams } from "react-router-dom";
 import { useEffect, useState } from "react";
 
@@ -24,6 +26,7 @@ export function PackageDetailPage() {
   const [currentHeroSlide, setCurrentHeroSlide] = useState(0);
 
   useEffect(() => {
+    // Ignore a late response after unmounting or switching to a different slug.
     let isMounted = true;
 
     async function loadPackage() {

@@ -1,3 +1,5 @@
+"""Adapt OpenAI completions and streaming to the chatbot service interface."""
+
 from __future__ import annotations
 
 from collections.abc import Iterator

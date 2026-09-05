@@ -1,3 +1,5 @@
+"""Translate package repository operations into SQLAlchemy queries and transactions."""
+
 from __future__ import annotations
 
 from collections.abc import Mapping

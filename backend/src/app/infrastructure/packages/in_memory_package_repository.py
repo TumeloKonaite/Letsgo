@@ -1,3 +1,5 @@
+"""Implement package persistence in memory for isolated development and tests."""
+
 from __future__ import annotations
 
 from collections.abc import Mapping

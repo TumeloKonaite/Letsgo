@@ -1,3 +1,5 @@
+"""Provide application liveness and a separate database connectivity probe."""
+
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status

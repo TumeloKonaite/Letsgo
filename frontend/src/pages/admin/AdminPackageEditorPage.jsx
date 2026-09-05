@@ -1,3 +1,5 @@
+// Coordinate package saves and staged image operations, retaining failed work for retry.
+
 import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 
@@ -244,6 +246,7 @@ export function AdminPackageEditorPage() {
     }
 
     if (queuedImages.length > 0) {
+      // Keep only failed uploads queued so a retry does not duplicate saved images.
       const failedUploadIds = new Set(failedUploads.map((item) => item.id));
       const successfulQueuedImages = queuedImages.filter(
         (image) => !failedUploadIds.has(image.id)
@@ -303,6 +306,7 @@ export function AdminPackageEditorPage() {
     setSavePhase("saving");
 
     try {
+      // Save first: image endpoints require a persisted package ID.
       let packageRecordId = activePackageId;
 
       if (isCreateMode) {

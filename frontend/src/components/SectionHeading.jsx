@@ -1,3 +1,5 @@
+// Share section title, eyebrow, and description markup across pages.
+
 export function SectionHeading({ eyebrow, title, description }) {
   return (
     <div className="section-heading fade-up">

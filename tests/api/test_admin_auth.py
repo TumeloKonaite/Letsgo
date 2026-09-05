@@ -76,7 +76,9 @@ def test_valid_clerk_token_is_accepted(admin_client: SeededAdminClient) -> None:
         "sub": "admin-user-1",
         "username": "admin.user",
         "email": "admin@example.com",
-        "claims": {"admin": True},
+        "roles": ["admin"],
+        "provider": "clerk",
+        "internal_user_id": None,
     }
 
 
@@ -169,7 +171,8 @@ def test_missing_token_returns_401_for_all_admin_package_mutations(
     )
 
     assert response.status_code == 401
-    assert response.json() == {"detail": "Missing bearer token"}
+    assert response.headers["www-authenticate"] == "Bearer"
+    assert response.json() == {"detail": "Invalid or missing credentials"}
 
 
 def test_invalid_token_returns_401(admin_client: SeededAdminClient) -> None:
@@ -195,7 +198,8 @@ def test_invalid_token_returns_401(admin_client: SeededAdminClient) -> None:
     )
 
     assert response.status_code == 401
-    assert response.json() == {"detail": "Invalid token"}
+    assert response.headers["www-authenticate"] == "Bearer"
+    assert response.json() == {"detail": "Invalid or missing credentials"}
 
 
 def test_expired_token_returns_401(admin_client: SeededAdminClient) -> None:
@@ -221,7 +225,8 @@ def test_expired_token_returns_401(admin_client: SeededAdminClient) -> None:
     )
 
     assert response.status_code == 401
-    assert response.json() == {"detail": "Token expired"}
+    assert response.headers["www-authenticate"] == "Bearer"
+    assert response.json() == {"detail": "Invalid or missing credentials"}
 
 
 def test_user_with_admin_claim_can_access_protected_routes(
@@ -260,7 +265,7 @@ def test_user_without_admin_claim_receives_403(admin_client: SeededAdminClient) 
     )
 
     assert response.status_code == 403
-    assert response.json() == {"detail": "Admin claim required"}
+    assert response.json() == {"detail": "Admin role required"}
 
 
 def test_application_fails_fast_when_clerk_configuration_is_missing(

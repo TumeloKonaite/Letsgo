@@ -1,3 +1,5 @@
+// Render shared footer navigation and business contact information.
+
 import { Link } from "react-router-dom";
 
 import { useAuth } from "../auth/AuthProvider";

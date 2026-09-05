@@ -1,3 +1,5 @@
+// Wrap protected package and image endpoints for the admin screens.
+
 import { authenticatedRequest } from "./client";
 
 function adminPackagesRequest(path, options = {}) {

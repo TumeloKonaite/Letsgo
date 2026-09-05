@@ -1,3 +1,5 @@
+// Share public business details and editorial content across informational pages.
+
 export const aboutHighlights = [
   {
     title: "Travel Planning with Local Insight",

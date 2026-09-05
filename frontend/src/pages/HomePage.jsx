@@ -1,3 +1,5 @@
+// Combine the rotating hero, service categories, and fetched package highlights.
+
 import { Link } from "react-router-dom";
 import { useEffect, useState } from "react";
 

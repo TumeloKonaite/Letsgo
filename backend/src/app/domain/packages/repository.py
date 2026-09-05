@@ -1,3 +1,5 @@
+"""Define package records and persistence contracts shared by repository adapters."""
+
 from __future__ import annotations
 
 from collections.abc import Mapping

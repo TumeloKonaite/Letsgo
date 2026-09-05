@@ -1,3 +1,5 @@
+"""Create database sessions and initialize SQLite or verify a migrated server schema."""
+
 from __future__ import annotations
 
 from sqlalchemy import Engine, create_engine, inspect, text

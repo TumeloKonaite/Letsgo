@@ -1,3 +1,5 @@
+// Provide shared site navigation, page content, footer, and the chat widget.
+
 import { NavLink, Outlet, useLocation } from "react-router-dom";
 import { useEffect, useState } from "react";
 

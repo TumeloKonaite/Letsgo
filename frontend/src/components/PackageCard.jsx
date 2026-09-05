@@ -1,3 +1,5 @@
+// Render a public package summary with pricing and a link to its detail page.
+
 import { Link } from "react-router-dom";
 
 import { formatCurrency } from "../lib/formatters";

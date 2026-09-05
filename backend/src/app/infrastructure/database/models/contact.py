@@ -1,3 +1,5 @@
+"""Map enquiry content and email delivery status to persistent database columns."""
+
 from __future__ import annotations
 
 from datetime import datetime

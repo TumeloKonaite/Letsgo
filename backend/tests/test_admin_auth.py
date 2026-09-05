@@ -69,7 +69,7 @@ def client() -> TestClient:
         clerk_admin_claim="admin",
     )
     app.state.package_service = PackageService(repository=repository)
-    app.state.clerk_auth_service = StubClerkAuthService()
+    app.state.authentication_provider = StubClerkAuthService()
     return TestClient(app)
 
 
@@ -120,39 +120,40 @@ def test_admin_endpoint_returns_401_without_token(client: TestClient) -> None:
     response = client.get("/api/admin/packages")
 
     assert response.status_code == 401
-    assert response.json() == {"detail": "Missing bearer token"}
+    assert response.json() == {"detail": "Invalid or missing credentials"}
 
 
 def test_admin_endpoint_returns_401_for_invalid_token(client: TestClient) -> None:
     response = client.get("/api/admin/packages", headers=_auth_headers("invalid-token"))
 
     assert response.status_code == 401
-    assert response.json() == {"detail": "Invalid token"}
+    assert response.json() == {"detail": "Invalid or missing credentials"}
 
 
 def test_admin_endpoint_returns_403_for_non_admin_user(client: TestClient) -> None:
-    client.app.state.clerk_auth_service.add_token(
+    client.app.state.authentication_provider.add_token(
         "member-token",
         AuthenticatedUser(
             subject="user-123",
             email="member@example.com",
-            claims={"admin": False},
+            provider="clerk",
         ),
     )
 
     response = client.get("/api/admin/packages", headers=_auth_headers("member-token"))
 
     assert response.status_code == 403
-    assert response.json() == {"detail": "Admin claim required"}
+    assert response.json() == {"detail": "Admin role required"}
 
 
 def test_admin_user_can_manage_packages(client: TestClient) -> None:
-    client.app.state.clerk_auth_service.add_token(
+    client.app.state.authentication_provider.add_token(
         "admin-token",
         AuthenticatedUser(
             subject="admin-123",
             email="admin@example.com",
-            claims={"admin": True},
+            provider="clerk",
+            roles=frozenset({"admin"}),
         ),
     )
 

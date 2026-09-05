@@ -1,3 +1,5 @@
+// Define public and protected admin routes within the shared site layout.
+
 import { Navigate, Route, Routes } from "react-router-dom";
 
 import { ProtectedRoute } from "./auth/ProtectedRoute";

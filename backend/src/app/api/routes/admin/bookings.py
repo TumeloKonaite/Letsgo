@@ -1,3 +1,5 @@
+"""Translate admin booking requests and domain failures into HTTP responses."""
+
 from __future__ import annotations
 
 from typing import Annotated

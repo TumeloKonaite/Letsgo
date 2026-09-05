@@ -1,3 +1,5 @@
+// Manage the package list, publication actions, and per-package request feedback.
+
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 

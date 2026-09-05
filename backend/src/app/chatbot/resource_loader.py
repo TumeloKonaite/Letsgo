@@ -1,3 +1,5 @@
+"""Load text and PDF prompt resources and distinguish missing from invalid content."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass

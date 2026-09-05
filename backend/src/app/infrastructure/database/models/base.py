@@ -1,3 +1,5 @@
+"""Share declarative metadata and timestamp columns across database models."""
+
 from __future__ import annotations
 
 from datetime import datetime

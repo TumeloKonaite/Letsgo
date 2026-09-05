@@ -1,3 +1,5 @@
+"""Load and validate the structured profile facts used to ground chatbot prompts."""
+
 from __future__ import annotations
 
 import json

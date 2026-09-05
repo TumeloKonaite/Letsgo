@@ -1,3 +1,5 @@
+// Gate admin navigation in the UI; the backend independently enforces access.
+
 import { Link } from "react-router-dom";
 
 import { useAuth } from "../auth/AuthProvider";

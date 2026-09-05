@@ -1,3 +1,5 @@
+"""Compose the chatbot system prompt from profile facts, style, and reference content."""
+
 from __future__ import annotations
 
 from datetime import UTC, datetime

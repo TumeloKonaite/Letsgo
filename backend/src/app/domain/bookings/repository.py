@@ -1,3 +1,5 @@
+"""Define booking records and persistence operations consumed by the booking service."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass

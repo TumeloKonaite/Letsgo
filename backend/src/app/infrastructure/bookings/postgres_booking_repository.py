@@ -1,3 +1,5 @@
+"""Persist booking changes with SQLAlchemy and return service-facing records."""
+
 from __future__ import annotations
 
 from sqlalchemy import Select, select

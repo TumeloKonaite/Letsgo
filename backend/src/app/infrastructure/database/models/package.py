@@ -1,3 +1,5 @@
+"""Map packages and their images, itineraries, inclusions, and availability to SQL."""
+
 from __future__ import annotations
 
 from datetime import date

@@ -1,3 +1,5 @@
+"""Resolve application resources and separate bearer authentication from role checks."""
+
 from __future__ import annotations
 
 from collections.abc import Iterator
@@ -7,11 +9,7 @@ from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session
 
-from app.auth.clerk_auth import (
-    ClerkAuthService,
-    ClerkTokenExpiredError,
-    ClerkTokenValidationError,
-)
+from app.domain.auth.provider import AuthenticationError, AuthenticationProvider
 from app.chatbot.service import TwinService
 from app.core.config import Settings
 from app.domain.auth.models import AuthenticatedUser
@@ -32,9 +30,9 @@ def get_settings(request: Request) -> Settings:
     return request.app.state.settings
 
 
-def get_clerk_auth_service(request: Request) -> ClerkAuthService:
-    """Return the shared Clerk token verifier."""
-    return request.app.state.clerk_auth_service
+def get_authentication_provider(request: Request) -> AuthenticationProvider:
+    """Return the configured provider-neutral token verifier."""
+    return request.app.state.authentication_provider
 
 
 def get_package_repository(request: Request) -> PackageRepository:
@@ -92,41 +90,47 @@ def get_db_session(request: Request) -> Iterator[Session]:
         session.close()
 
 
-def get_current_user(
-    credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(bearer_scheme)],
-    clerk_auth_service: Annotated[ClerkAuthService, Depends(get_clerk_auth_service)],
-) -> AuthenticatedUser:
-    """Authenticate a request from its Clerk bearer token."""
-    if credentials is None or credentials.scheme.lower() != "bearer":
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Missing bearer token",
-        )
+def authentication_required() -> HTTPException:
+    return HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Invalid or missing credentials",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
 
+
+def get_bearer_token(
+    credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(bearer_scheme)],
+) -> str:
+    """Extract one bearer credential without interpreting its provider format."""
+    if (
+        credentials is None
+        or credentials.scheme.lower() != "bearer"
+        or not credentials.credentials
+        or any(character.isspace() for character in credentials.credentials)
+    ):
+        raise authentication_required()
+    return credentials.credentials
+
+
+def get_current_user(
+    token: Annotated[str, Depends(get_bearer_token)],
+    provider: Annotated[AuthenticationProvider, Depends(get_authentication_provider)],
+) -> AuthenticatedUser:
+    """Authenticate through the configured provider boundary."""
     try:
-        return clerk_auth_service.verify_token(credentials.credentials)
-    except ClerkTokenExpiredError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Token expired",
-        ) from exc
-    except ClerkTokenValidationError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid token",
-        ) from exc
+        return provider.verify_token(token)
+    except AuthenticationError:
+        # Keep provider diagnostics out of responses and use one Bearer challenge.
+        raise authentication_required() from None
 
 
 def require_admin(
     current_user: Annotated[AuthenticatedUser, Depends(get_current_user)],
-    settings: Annotated[Settings, Depends(get_settings)],
 ) -> AuthenticatedUser:
-    """Require the configured boolean admin claim on an authenticated user."""
-    admin_claim = settings.clerk_admin_claim
-    assert admin_claim is not None
-    if current_user.claims.get(admin_claim) is not True:
+    """Apply the application's admin role rule after authentication."""
+    if "admin" not in current_user.roles:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Admin claim required",
+            detail="Admin role required",
         )
     return current_user

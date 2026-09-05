@@ -1,3 +1,5 @@
+// Display reusable loading, empty, and error messages with an optional action.
+
 export function StatusPanel({
   title,
   message,

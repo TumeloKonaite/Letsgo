@@ -1,3 +1,5 @@
+// Combine business contact details with the public enquiry form.
+
 import { Link } from "react-router-dom";
 
 import { ContactForm } from "../components/ContactForm";

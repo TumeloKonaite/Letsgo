@@ -1,3 +1,5 @@
+"""Adapt Google Cloud Storage operations and failures to the image storage contract."""
+
 from __future__ import annotations
 
 from collections.abc import Callable

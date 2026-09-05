@@ -1,3 +1,5 @@
+"""Define conversation persistence and a JSON-file implementation with history recovery."""
+
 from __future__ import annotations
 
 import json

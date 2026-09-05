@@ -76,7 +76,10 @@ def build_user(
         subject=subject,
         username=username or email,
         email=email,
-        claims=resolved_claims,
+        provider="clerk",
+        roles=frozenset({"admin"})
+        if resolved_claims.get("admin") is True
+        else frozenset(),
     )
 
 
@@ -101,7 +104,7 @@ def install_stub_clerk_auth(application) -> StubClerkAuthService:
         ),
     )
     service.expired_tokens.add(TEST_EXPIRED_TOKEN)
-    application.state.clerk_auth_service = service
+    application.state.authentication_provider = service
     return service
 
 

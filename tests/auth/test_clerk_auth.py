@@ -48,6 +48,7 @@ def service(public_key: str) -> ClerkAuthService:
         jwt_key=public_key,
         issuer_url="https://clerk.example.invalid",
         authorized_parties=("https://travel.example.invalid",),
+        admin_claim="admin",
     )
 
 
@@ -58,7 +59,10 @@ def test_valid_clerk_token_is_mapped_to_authenticated_user(signing_keys) -> None
 
     assert user.subject == "user_test"
     assert user.email == "admin@example.invalid"
-    assert user.claims["admin"] is True
+    assert user.roles == frozenset({"admin"})
+    assert user.provider == "clerk"
+    assert user.internal_user_id is None
+    assert not hasattr(user, "claims")
 
 
 def test_token_from_unauthorized_party_is_rejected(signing_keys) -> None:
@@ -77,3 +81,66 @@ def test_expired_token_is_rejected_distinctly(signing_keys) -> None:
         service(public_key).verify_token(
             token(private_key, exp=datetime.now(UTC) - timedelta(seconds=1))
         )
+
+
+@pytest.mark.parametrize("value", [False, "true", 1, None, ["admin"]])
+def test_admin_role_requires_boolean_true(signing_keys, value) -> None:
+    private_key, public_key = signing_keys
+    user = service(public_key).verify_token(token(private_key, admin=value))
+    assert user.roles == frozenset()
+
+
+@pytest.mark.parametrize(
+    "overrides",
+    [
+        {"iss": "https://untrusted.example.invalid"},
+        {"aud": "another-api"},
+        {"sub": ""},
+        {"sub": 123},
+        {"azp": None},
+        {"exp": None},
+    ],
+)
+def test_invalid_claims_are_rejected(signing_keys, overrides) -> None:
+    private_key, public_key = signing_keys
+    with pytest.raises(ClerkTokenValidationError):
+        service(public_key).verify_token(token(private_key, **overrides))
+
+
+def test_invalid_signature_is_rejected(signing_keys) -> None:
+    _, public_key = signing_keys
+    other_key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+    with pytest.raises(ClerkTokenValidationError):
+        service(public_key).verify_token(token(other_key))
+
+
+def test_malformed_token_is_rejected(signing_keys) -> None:
+    _, public_key = signing_keys
+    with pytest.raises(ClerkTokenValidationError):
+        service(public_key).verify_token("not.a.jwt")
+
+
+def test_claim_fallbacks_and_custom_role_mapping(signing_keys) -> None:
+    private_key, public_key = signing_keys
+    adapter = ClerkAuthService(
+        jwt_key=public_key,
+        issuer_url="https://clerk.example.invalid",
+        authorized_parties=("https://travel.example.invalid",),
+        admin_claim="app_admin",
+    )
+    user = adapter.verify_token(
+        token(
+            private_key,
+            username=42,
+            name="Test User",
+            email=None,
+            email_address="test@example.invalid",
+            app_admin=True,
+            roles=["superuser"],
+            internal_user_id="untrusted",
+        )
+    )
+    assert user.username == "Test User"
+    assert user.email == "test@example.invalid"
+    assert user.roles == frozenset({"admin"})
+    assert user.internal_user_id is None

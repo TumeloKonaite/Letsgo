@@ -1,3 +1,5 @@
+"""Define the email delivery contract and errors handled by the contact service."""
+
 from __future__ import annotations
 
 from typing import Protocol

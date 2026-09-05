@@ -1,3 +1,5 @@
+"""Apply booking lookup and update workflows, translating records into API responses."""
+
 from __future__ import annotations
 
 from app.api.schemas.bookings import BookingResponse

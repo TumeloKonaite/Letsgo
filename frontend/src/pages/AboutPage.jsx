@@ -1,3 +1,5 @@
+// Present the travel service, planning process, and reasons to contact the team.
+
 import { Link } from "react-router-dom";
 
 import { PublicPageHero } from "../components/PublicPageHero";

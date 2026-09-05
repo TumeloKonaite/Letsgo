@@ -1,3 +1,5 @@
+// Render the chat panel and coordinate focus, scrolling, and conversation controls.
+
 import { useEffect, useRef } from "react";
 
 import { ChatInput } from "./ChatInput";

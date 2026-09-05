@@ -1,3 +1,5 @@
+// Wait for session readiness and preserve the requested location during sign-in.
+
 import { Navigate, Outlet, useLocation } from "react-router-dom";
 
 import { StatusPanel } from "../components/StatusPanel";

@@ -1,3 +1,5 @@
+// Format API prices, date ranges, and availability labels for South African display.
+
 export function formatCurrency(amount, currency) {
   const numericAmount = Number(amount);
 

@@ -1,3 +1,5 @@
+// Own chat history, session continuity, request timeouts, and unread message state.
+
 import { useEffect, useRef, useState } from "react";
 
 import { submitChatMessage } from "../../lib/api";
@@ -87,6 +89,7 @@ export function ChatWidget() {
   const [sessionId, setSessionId] = useState(storedState?.sessionId ?? null);
   const [unreadCount, setUnreadCount] = useState(hasStoredConversation ? storedState.unreadCount : 1);
   const launcherRef = useRef(null);
+  // Async replies need the current panel state, not the state when sending began.
   const isOpenRef = useRef(isOpen);
   const sessionIdRef = useRef(sessionId);
 

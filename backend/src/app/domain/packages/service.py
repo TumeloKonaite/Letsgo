@@ -1,3 +1,5 @@
+"""Coordinate package edits, publication, and conversion to public or admin views."""
+
 from __future__ import annotations
 
 from app.api.schemas.packages import (
@@ -148,6 +150,7 @@ class PackageService:
         )
 
     def _to_update_data(self, package_data: PackageUpdate) -> dict[str, object]:
+        # PATCH must preserve omitted fields; an explicit empty list clears children.
         updates = package_data.model_dump(exclude_unset=True)
         if "itinerary" in updates:
             updates["itinerary"] = tuple(

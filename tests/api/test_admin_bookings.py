@@ -92,7 +92,7 @@ def test_missing_token_returns_401(admin_bookings_client: AdminBookingsClient) -
     response = admin_bookings_client.client.get("/api/admin/bookings")
 
     assert response.status_code == 401
-    assert response.json() == {"detail": "Missing bearer token"}
+    assert response.json() == {"detail": "Invalid or missing credentials"}
 
 
 def test_non_admin_token_returns_403(
@@ -104,7 +104,7 @@ def test_non_admin_token_returns_403(
     )
 
     assert response.status_code == 403
-    assert response.json() == {"detail": "Admin claim required"}
+    assert response.json() == {"detail": "Admin role required"}
 
 
 def test_admin_can_list_bookings(admin_bookings_client: AdminBookingsClient) -> None:
