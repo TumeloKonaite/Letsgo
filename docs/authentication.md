@@ -12,11 +12,14 @@ admin role receive 403. Providers must never log tokens or raw claims.
 
 The immutable user contains `subject`, `provider`, optional `internal_user_id`,
 `username`, `email`, and immutable application `roles`. `subject` remains the
-provider's stable subject, not an internal database ID. Identity must be keyed by
-`(provider, subject)` when supporting multiple providers. Never equate a Firebase
-UID and a Clerk subject, even if their strings match. No identity migration or
-internal ID lookup is introduced here; `internal_user_id` remains `None` until an
-application-owned mapping is available.
+provider's stable subject, not an internal database ID. `user_identities` has a
+unique `(provider, subject)` key and points to an `application_users` row. On the
+first valid Clerk request, the backend provisions both rows and returns the new
+application UUID as `internal_user_id`; later requests resolve the same UUID.
+Verified profile fields are refreshed on sign-in. Email and username are mutable
+display data and are never automatic link keys. Linking another provider to an
+existing user requires a future explicit, authenticated account-linking workflow.
+Never equate subjects from different providers even when their strings match.
 
 Raw claims have been removed. `/api/admin/auth/me` preserves `sub`, `username`
 and `email`, and replaces `claims` with `roles`, `provider`, and
@@ -29,11 +32,14 @@ additionally require the admin role.
 This checkout already used Clerk before this refactor and has no Firebase auth
 adapter or Firebase identity migration to preserve. Clerk remains configured;
 this change does not activate a new production provider. Its adapter lives in
-`app.auth.clerk_auth`, an authentication infrastructure module. It verifies RS256
-signatures, issuer, expiry and the configured authorized browser parties (`azp`).
-The existing configuration uses no JWT audience; tokens declaring an audience
-are rejected by PyJWT. A deployment using audience-bearing tokens must explicitly
-configure and validate the intended audience in the adapter before accepting them.
+`app.auth.clerk_auth`, an authentication infrastructure module. It uses Clerk's
+official Python backend SDK `authenticate_request` in networkless mode with the
+configured PEM key. The SDK restricts accepted credentials to session tokens,
+RS256 signatures, expiry and the configured authorized browser parties (`azp`);
+the adapter additionally requires `sub`, `iss`, `azp`, `iat`, and `exp` and checks
+the issuer exactly. The existing configuration uses no JWT audience, so tokens
+declaring an audience are rejected. A deployment using audience-bearing tokens
+must explicitly configure and validate the intended audience before accepting them.
 Only the configured boolean admin claim equal to `True` maps to the application's
 `admin` role. Arbitrary `roles` or internal ID claims are not trusted.
 
@@ -51,5 +57,5 @@ To introduce another provider (including Firebase, or another Clerk integration)
    semantics. Override `get_authentication_provider` in route tests to exercise
    provider-independent behavior. Existing route and service code need no changes.
 
-Switching providers still requires a separate identity-linking/migration design
-for records owned by existing subjects. It is outside this change.
+Historical Firebase identity migration and user-initiated cross-provider linking
+remain outside this change.

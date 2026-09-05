@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 
 import jwt
@@ -33,7 +34,7 @@ def token(private_key: bytes, **overrides) -> str:
     claims = {
         "sub": "user_test",
         "iss": "https://clerk.example.invalid",
-        "azp": "https://travel.example.invalid",
+        "azp": "https://letsgosa.vercel.app",
         "iat": now,
         "exp": now + timedelta(minutes=5),
         "email": "admin@example.invalid",
@@ -45,9 +46,10 @@ def token(private_key: bytes, **overrides) -> str:
 
 def service(public_key: str) -> ClerkAuthService:
     return ClerkAuthService(
+        secret_key="sk_test_synthetic",
         jwt_key=public_key,
         issuer_url="https://clerk.example.invalid",
-        authorized_parties=("https://travel.example.invalid",),
+        authorized_parties=("https://letsgosa.vercel.app",),
         admin_claim="admin",
     )
 
@@ -63,6 +65,36 @@ def test_valid_clerk_token_is_mapped_to_authenticated_user(signing_keys) -> None
     assert user.provider == "clerk"
     assert user.internal_user_id is None
     assert not hasattr(user, "claims")
+
+
+def test_verified_identity_is_resolved_through_provider_neutral_repository(
+    signing_keys,
+) -> None:
+    private_key, public_key = signing_keys
+
+    class IdentityRepository:
+        def __init__(self) -> None:
+            self.seen = None
+
+        def resolve_or_provision(self, user):
+            self.seen = user
+            return replace(user, internal_user_id="internal-user-1")
+
+    repository = IdentityRepository()
+    adapter = ClerkAuthService(
+        secret_key="sk_test_synthetic",
+        jwt_key=public_key,
+        issuer_url="https://clerk.example.invalid",
+        authorized_parties=("https://letsgosa.vercel.app",),
+        admin_claim="admin",
+        identity_repository=repository,
+    )
+
+    user = adapter.verify_token(token(private_key))
+
+    assert repository.seen is not None
+    assert repository.seen.subject == "user_test"
+    assert user.internal_user_id == "internal-user-1"
 
 
 def test_token_from_unauthorized_party_is_rejected(signing_keys) -> None:
@@ -123,9 +155,10 @@ def test_malformed_token_is_rejected(signing_keys) -> None:
 def test_claim_fallbacks_and_custom_role_mapping(signing_keys) -> None:
     private_key, public_key = signing_keys
     adapter = ClerkAuthService(
+        secret_key="sk_test_synthetic",
         jwt_key=public_key,
         issuer_url="https://clerk.example.invalid",
-        authorized_parties=("https://travel.example.invalid",),
+        authorized_parties=("https://letsgosa.vercel.app",),
         admin_claim="app_admin",
     )
     user = adapter.verify_token(
