@@ -29,9 +29,9 @@ jobs:
       CLERK_AUTHORIZED_PARTIES: http://localhost:5173
       CLERK_ADMIN_CLAIM: admin
       STORAGE_PROVIDER: gcs
-      GCP_PROJECT_ID: ci-project
+      GCS_PROJECT_ID: ci-project
       GCS_BUCKET_NAME: ci-bucket
-      GCS_PUBLIC_BASE_URL: https://example.invalid/storage
+      GCS_OBJECT_PREFIX: ci/
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
