@@ -43,3 +43,6 @@ cd frontend && npm test && npm run build
 ```
 
 Deployment provisioning is intentionally outside this repository task. See [docs/rebuild-dependencies.md](docs/rebuild-dependencies.md) for the clean-start dependency boundaries.
+
+See [the authentication boundary](docs/authentication.md) for normalized identity
+semantics, error responses, and adding another authentication provider.

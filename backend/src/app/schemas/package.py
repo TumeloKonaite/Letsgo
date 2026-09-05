@@ -1,3 +1,5 @@
+"""Define name/location/price_zar package schemas, distinct from the richer API views."""
+
 from decimal import Decimal
 
 from pydantic import BaseModel, ConfigDict, Field

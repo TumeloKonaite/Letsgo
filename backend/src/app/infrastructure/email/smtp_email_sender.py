@@ -1,3 +1,5 @@
+"""Deliver contact notifications over SMTP using the configured transport settings."""
+
 from __future__ import annotations
 
 import smtplib

@@ -1,3 +1,5 @@
+"""Coordinate admin image metadata in SQL with file operations in object storage."""
+
 from __future__ import annotations
 
 from typing import Annotated
@@ -163,6 +165,7 @@ async def upload_package_image(
             session.commit()
             session.refresh(image)
         except Exception:
+            # SQL and object storage cannot share a transaction; compensate on failure.
             session.rollback()
             try:
                 storage_service.delete_image(stored_object.object_name)
@@ -199,6 +202,7 @@ def delete_package_image(
 ) -> Response:
     with session_factory() as session:
         package = _get_package_or_404(session, package_id)
+        # Scope the image lookup to this package, even when the image ID exists elsewhere.
         image = next(
             (candidate for candidate in package.images if candidate.id == image_id),
             None,

@@ -1,3 +1,5 @@
+"""Validate public enquiries and delegate persistence and delivery to the contact service."""
+
 from __future__ import annotations
 
 from typing import Annotated

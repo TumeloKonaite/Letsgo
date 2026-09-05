@@ -1,3 +1,5 @@
+// Adapt Clerk session state and actions to the authentication context used by the UI.
+
 import { useAuth as useClerkAuth, useClerk, useUser } from "@clerk/clerk-react";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 
@@ -27,6 +29,7 @@ export function AuthProvider({ children }) {
   const [error, setError] = useState("");
   const isReady = isAuthLoaded && isUserLoaded;
   const isAuthenticated = isReady && Boolean(isSignedIn);
+  // This flag controls navigation only; protected API routes enforce authorization.
   const isAdmin = sessionClaims?.[frontendConfig.clerkAdminClaim] === true;
 
   const login = useCallback(

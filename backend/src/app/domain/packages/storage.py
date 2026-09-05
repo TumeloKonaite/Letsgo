@@ -1,3 +1,5 @@
+"""Define image storage operations, upload validation, and portable object naming."""
+
 from __future__ import annotations
 
 import re

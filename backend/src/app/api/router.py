@@ -1,3 +1,5 @@
+"""Assemble public and admin endpoints under the configured API prefix."""
+
 from fastapi import APIRouter
 
 from app.api.routes.admin.auth import router as admin_auth_router

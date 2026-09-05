@@ -1,3 +1,5 @@
+// Offer navigation back to public pages when no route matches.
+
 import { Link } from "react-router-dom";
 
 import { PublicPageHero } from "../components/PublicPageHero";

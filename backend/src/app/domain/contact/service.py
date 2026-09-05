@@ -1,3 +1,5 @@
+"""Persist enquiries, send notification email, and record the delivery outcome."""
+
 from __future__ import annotations
 
 from app.domain.contact.models import ContactSubmission
@@ -19,6 +21,7 @@ class ContactService:
         self._repository = repository
 
     def submit_contact_request(self, submission: ContactSubmission) -> None:
+        # Record the enquiry before delivery so the delivery outcome can be tracked.
         try:
             submission_id = self._repository.create(submission)
         except Exception as exc:

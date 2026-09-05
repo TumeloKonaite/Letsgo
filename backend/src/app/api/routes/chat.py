@@ -1,3 +1,5 @@
+"""Serve complete and streaming chat replies, translating service failures to HTTP."""
+
 from __future__ import annotations
 
 import logging

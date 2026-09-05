@@ -1,3 +1,5 @@
+"""Store enquiries and delivery outcomes using SQLAlchemy sessions."""
+
 from __future__ import annotations
 
 from datetime import UTC, datetime

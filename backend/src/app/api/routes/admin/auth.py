@@ -1,3 +1,5 @@
+"""Expose normalized identity to signed-in users; admin access is checked separately."""
+
 from __future__ import annotations
 
 from typing import Annotated
@@ -18,5 +20,7 @@ def get_authenticated_user(
         "sub": current_user.subject,
         "username": current_user.username,
         "email": current_user.email,
-        "claims": current_user.claims,
+        "roles": sorted(current_user.roles),
+        "provider": current_user.provider,
+        "internal_user_id": current_user.internal_user_id,
     }

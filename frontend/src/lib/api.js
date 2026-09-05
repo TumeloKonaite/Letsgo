@@ -1,3 +1,5 @@
+// Provide public package, enquiry, and chat requests through the shared HTTP client.
+
 import { apiBaseUrl, request } from "../api/client";
 
 export function getPackages() {

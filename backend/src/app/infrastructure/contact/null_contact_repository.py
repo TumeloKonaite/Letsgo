@@ -1,3 +1,5 @@
+"""Provide a no-op enquiry repository when persistence is intentionally omitted."""
+
 from __future__ import annotations
 
 from app.domain.contact.models import ContactSubmission

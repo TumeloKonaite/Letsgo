@@ -1,3 +1,5 @@
+"""Define booking response fields and the accepted admin status update payload."""
+
 from __future__ import annotations
 
 from datetime import datetime

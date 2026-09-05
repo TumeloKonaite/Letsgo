@@ -1,3 +1,5 @@
+// Load protected identity and package data for the admin overview.
+
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 

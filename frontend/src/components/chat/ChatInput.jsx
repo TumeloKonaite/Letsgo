@@ -1,3 +1,5 @@
+// Manage the expanding chat input, focus, and Enter-to-send keyboard behavior.
+
 import { useEffect, useId, useRef } from "react";
 
 export function ChatInput({ disabled, onChange, onSubmit, shouldFocus, value }) {

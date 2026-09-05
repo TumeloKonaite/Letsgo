@@ -1,3 +1,5 @@
+// Load the public package catalogue and display loading, error, and result states.
+
 import { useEffect, useState } from "react";
 
 import { PackageCard } from "../components/PackageCard";

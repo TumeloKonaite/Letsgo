@@ -1,3 +1,5 @@
+"""Centralize chatbot resource filenames relative to the configured data directory."""
+
 from __future__ import annotations
 
 from pathlib import Path

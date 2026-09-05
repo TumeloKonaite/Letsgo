@@ -1,3 +1,5 @@
+"""Coordinate prompt construction, model responses, and conversation persistence."""
+
 from __future__ import annotations
 
 import uuid
@@ -113,6 +115,7 @@ class TwinService:
                     assistant_parts.append(content)
                     yield content
             finally:
+                # Preserve any emitted reply even if the stream ends before completion.
                 assistant_response = "".join(assistant_parts).strip()
                 if assistant_response:
                     conversation.append({"role": "user", "content": user_message})

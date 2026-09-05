@@ -1,3 +1,5 @@
+"""Compose adapters and services during FastAPI startup and release resources on shutdown."""
+
 from __future__ import annotations
 
 from contextlib import asynccontextmanager
@@ -108,11 +110,13 @@ def create_application(settings: Settings | None = None) -> FastAPI:
             prompt_builder=prompt_builder,
         )
         assert resolved_settings.clerk_jwt_key
+        assert resolved_settings.clerk_admin_claim
         assert resolved_settings.clerk_issuer_url
-        app.state.clerk_auth_service = ClerkAuthService(
+        app.state.authentication_provider = ClerkAuthService(
             jwt_key=resolved_settings.clerk_jwt_key,
             issuer_url=resolved_settings.clerk_issuer_url,
             authorized_parties=resolved_settings.clerk_authorized_parties,
+            admin_claim=resolved_settings.clerk_admin_claim,
         )
         app.state.started = True
 

@@ -143,7 +143,7 @@ def test_non_admin_users_receive_403(
     )
 
     assert response.status_code == 403
-    assert response.json() == {"detail": "Admin claim required"}
+    assert response.json() == {"detail": "Admin role required"}
 
 
 def test_unsupported_file_types_receive_400(

@@ -1,3 +1,5 @@
+"""Validate and normalize public contact form data before it reaches the service."""
+
 from __future__ import annotations
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator

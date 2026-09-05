@@ -1,3 +1,5 @@
+"""Map bookings, their status values, and package relationships to SQL tables."""
+
 from __future__ import annotations
 
 from enum import StrEnum

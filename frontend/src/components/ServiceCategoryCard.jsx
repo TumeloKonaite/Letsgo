@@ -1,3 +1,5 @@
+// Present a service category with its image, category tag, and description.
+
 export function ServiceCategoryCard({ category }) {
   return (
     <article

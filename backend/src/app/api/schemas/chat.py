@@ -1,3 +1,5 @@
+"""Define chat messages and the session identifiers used to continue conversations."""
+
 from __future__ import annotations
 
 from pydantic import BaseModel

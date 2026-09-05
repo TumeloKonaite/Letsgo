@@ -279,7 +279,7 @@ def test_admin_endpoints_require_authentication(
     )
 
     assert response.status_code == 401
-    assert response.json() == {"detail": "Missing bearer token"}
+    assert response.json() == {"detail": "Invalid or missing credentials"}
 
 
 def test_admin_endpoints_require_admin_claim(
@@ -291,4 +291,4 @@ def test_admin_endpoints_require_admin_claim(
     )
 
     assert response.status_code == 403
-    assert response.json() == {"detail": "Admin claim required"}
+    assert response.json() == {"detail": "Admin role required"}

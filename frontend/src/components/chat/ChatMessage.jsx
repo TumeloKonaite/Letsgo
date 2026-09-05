@@ -1,3 +1,5 @@
+// Render a conversation message with styling for its role and error state.
+
 function formatTimestamp(value) {
   if (!value) {
     return "";

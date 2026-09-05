@@ -1,3 +1,5 @@
+"""Define public package views and admin payloads, including nested ordering rules."""
+
 from __future__ import annotations
 
 from datetime import date

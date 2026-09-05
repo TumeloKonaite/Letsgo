@@ -1,3 +1,5 @@
+// Validate the allowlisted browser configuration before the app mounts or builds.
+
 const DEVELOPMENT_API_BASE_URL = "http://localhost:8000";
 
 export const PUBLIC_ENVIRONMENT_KEYS = Object.freeze([

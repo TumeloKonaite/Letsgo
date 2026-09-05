@@ -1,3 +1,5 @@
+// Normalize editable package values and render fields, nested items, and image controls.
+
 import { useEffect, useState } from "react";
 
 import { StatusPanel } from "../StatusPanel";

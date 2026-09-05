@@ -1,3 +1,5 @@
+"""Represent a contact enquiry independently of HTTP validation and SQL storage."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass

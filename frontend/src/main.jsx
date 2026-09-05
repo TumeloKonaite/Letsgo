@@ -1,3 +1,5 @@
+// Validate browser configuration and mount authentication, routing, and the React app.
+
 import React from "react";
 import ReactDOM from "react-dom/client";
 import { ClerkProvider } from "@clerk/clerk-react";

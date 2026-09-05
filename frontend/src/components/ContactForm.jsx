@@ -1,3 +1,5 @@
+// Manage enquiry field values, validation feedback, and submission status.
+
 import { useState } from "react";
 
 import { submitContactRequest } from "../lib/api";

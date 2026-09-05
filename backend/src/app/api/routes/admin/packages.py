@@ -1,3 +1,5 @@
+"""Expose package management and publication actions behind the admin role check."""
+
 from __future__ import annotations
 
 from typing import Annotated

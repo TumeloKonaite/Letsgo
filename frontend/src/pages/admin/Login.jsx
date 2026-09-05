@@ -1,3 +1,5 @@
+// Start sign-in and return authenticated visitors to the requested admin location.
+
 import { useMemo } from "react";
 import { Link, Navigate, useLocation, useSearchParams } from "react-router-dom";
 
