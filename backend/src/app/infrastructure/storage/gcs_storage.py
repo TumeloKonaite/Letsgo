@@ -1,13 +1,19 @@
-"""Adapt Google Cloud Storage operations and failures to the image storage contract."""
+"""Private, prefix-scoped GCS image storage with explicit credentials."""
 
 from __future__ import annotations
 
+import json
+import os
 from collections.abc import Callable
-from io import BytesIO
+from datetime import timedelta
 from urllib.parse import quote, unquote, urlparse
 
+import google.auth
 from google.api_core.exceptions import Forbidden, GoogleAPIError, NotFound, Unauthorized
-from google.cloud.storage import Bucket, Client
+from google.auth import identity_pool
+from google.auth.exceptions import GoogleAuthError
+from google.auth.transport.requests import Request
+from google.cloud.storage import Client
 from google.oauth2 import service_account
 
 from app.core.config import Settings
@@ -20,160 +26,154 @@ from app.domain.packages.storage import (
 )
 
 
-class GcsStorageService(StorageService):
-    """Store package images in one explicitly configured GCS bucket."""
+class ModalTokenSupplier(identity_pool.SubjectTokenSupplier):
+    def get_subject_token(self, context, request):
+        token = os.environ.get("MODAL_IDENTITY_TOKEN")
+        if not token:
+            raise GoogleAuthError("Workload identity unavailable")
+        return token
 
+
+class GcsStorageService(StorageService):
     def __init__(
         self,
         *,
         project_id: str,
         bucket_name: str,
-        public_base_url: str,
+        object_prefix: str,
         client: Client | None = None,
         client_factory: Callable[[], Client] | None = None,
+        service_account_email: str | None = None,
     ) -> None:
-        """Prepare a lazy GCS client and normalize public URL settings."""
-        self._project_id = project_id.strip()
-        self._bucket_name = bucket_name.strip()
-        self._public_base_url = public_base_url.rstrip("/")
+        self._bucket_name = bucket_name
+        self._prefix = object_prefix
         self._client = client
-        self._client_factory = client_factory or (
-            lambda: Client(project=self._project_id)
-        )
+        self._client_factory = client_factory
+        self._service_account_email = service_account_email
 
-    def _get_client(self) -> Client:
-        """Create the GCS client only when the first storage call needs it."""
+    def _get_client(self):
         if self._client is None:
+            if self._client_factory is None:
+                raise StorageAuthenticationError("Image storage unavailable")
             self._client = self._client_factory()
         return self._client
 
-    def upload_image(
-        self, object_name: str, content: bytes, content_type: str
-    ) -> StoredObject:
-        """Upload image bytes and return their public object metadata."""
-        bucket = self._ensure_bucket_exists()
-        blob = bucket.blob(object_name)
-        try:
-            blob.upload_from_file(
-                BytesIO(content),
-                size=len(content),
-                content_type=content_type,
-            )
-        except (Forbidden, Unauthorized) as exc:
-            raise StorageAuthenticationError(
-                "Storage credentials were rejected."
-            ) from exc
-        except NotFound as exc:
-            raise StorageBucketNotFoundError(
-                f"Storage bucket '{self._bucket_name}' was not found."
-            ) from exc
-        except (GoogleAPIError, OSError) as exc:
-            raise StorageError(
-                f"Storage request failed: {type(exc).__name__}."
-            ) from exc
+    def _validate_name(self, name):
+        if (
+            not name.startswith(self._prefix)
+            or any(part in ("", ".", "..") for part in name.split("/"))
+            or "\\" in name
+        ):
+            raise StorageError("Invalid image reference")
+        return name
 
+    def _blob(self, name):
+        self._validate_name(name)
+        # No bucket metadata or list permission is required.
+        return self._get_client().bucket(self._bucket_name).blob(name)
+
+    def _run(self, operation):
+        try:
+            return operation()
+        except (Forbidden, Unauthorized, GoogleAuthError):
+            raise StorageAuthenticationError("Image storage unavailable") from None
+        except NotFound:
+            raise StorageBucketNotFoundError("Image storage unavailable") from None
+        except (GoogleAPIError, OSError, ValueError, TypeError):
+            raise StorageError("Image storage unavailable") from None
+
+    def upload_image(self, object_name, content, content_type):
+        # Domain names begin with packages/; prefix is a deployment namespace.
+        name = self._prefix + object_name
+        self._run(
+            lambda: self._blob(name).upload_from_string(
+                content, content_type=content_type, if_generation_match=0
+            )
+        )
         return StoredObject(
-            object_name=object_name,
-            url=self.get_public_url(object_name),
-            content_type=content_type,
-            size=len(content),
+            name,
+            f"https://storage.googleapis.com/{self._bucket_name}/{quote(name, safe='/')}",
+            content_type,
+            len(content),
         )
 
-    def delete_image(self, object_name: str) -> None:
-        """Delete an object while treating an already-missing object as success."""
-        bucket = self._ensure_bucket_exists()
-        blob = bucket.blob(object_name)
-        try:
-            blob.delete()
-        except NotFound:
-            return
-        except (Forbidden, Unauthorized) as exc:
-            raise StorageAuthenticationError(
-                "Storage credentials were rejected."
-            ) from exc
-        except (GoogleAPIError, OSError) as exc:
-            raise StorageError(
-                f"Storage request failed: {type(exc).__name__}."
-            ) from exc
+    def delete_image(self, object_name):
+        def delete():
+            try:
+                self._blob(object_name).delete()
+            except NotFound:
+                pass
 
-    def get_public_url(self, object_name: str) -> str:
-        """Build the public URL for an encoded object name."""
-        return f"{self._public_base_url}/{quote(object_name, safe='/~')}"
+        self._run(delete)
 
-    def extract_object_name(self, url: str) -> str | None:
-        """Recover an object name from supported public GCS URL formats."""
-        normalized_base = self._public_base_url.rstrip("/") + "/"
-        if url.startswith(normalized_base):
-            return unquote(url.removeprefix(normalized_base))
+    def get_public_url(self, object_name):
+        """Legacy interface name: return a private GET capability valid for 15 minutes."""
 
+        def sign():
+            blob = self._blob(object_name)
+            kwargs = {}
+            if self._service_account_email:
+                credentials = self._get_client()._credentials
+                if not credentials.valid:
+                    credentials.refresh(Request())
+                kwargs = {
+                    "service_account_email": self._service_account_email,
+                    "access_token": credentials.token,
+                }
+            return blob.generate_signed_url(
+                version="v4", expiration=timedelta(minutes=15), method="GET", **kwargs
+            )
+
+        return self._run(sign)
+
+    def extract_object_name(self, url):
         parsed = urlparse(url)
-        if parsed.netloc == "storage.googleapis.com":
-            expected_prefix = f"/{self._bucket_name}/"
-            if parsed.path.startswith(expected_prefix):
-                return unquote(parsed.path[len(expected_prefix) :])
+        prefix = f"/{self._bucket_name}/"
+        if (
+            parsed.scheme != "https"
+            or parsed.netloc != "storage.googleapis.com"
+            or not parsed.path.startswith(prefix)
+        ):
             return None
-
-        if parsed.netloc == f"{self._bucket_name}.storage.googleapis.com":
-            return unquote(parsed.path.lstrip("/"))
-
-        return None
-
-    def _ensure_bucket_exists(self) -> Bucket:
-        """Resolve the configured bucket and translate provider errors."""
-        bucket = self._get_client().bucket(self._bucket_name)
         try:
-            if not bucket.exists():
-                raise StorageBucketNotFoundError(
-                    f"Storage bucket '{self._bucket_name}' was not found."
-                )
-        except (Forbidden, Unauthorized) as exc:
-            raise StorageAuthenticationError(
-                "Storage credentials were rejected."
-            ) from exc
-        except NotFound as exc:
-            raise StorageBucketNotFoundError(
-                f"Storage bucket '{self._bucket_name}' was not found."
-            ) from exc
-        except (GoogleAPIError, OSError) as exc:
-            raise StorageError(
-                f"Storage request failed: {type(exc).__name__}."
-            ) from exc
-        return bucket
+            return self._validate_name(unquote(parsed.path[len(prefix) :]))
+        except StorageError:
+            return None
 
 
 def create_storage_service(settings: Settings) -> StorageService:
-    """Build the selected storage adapter from validated settings."""
-    provider = settings.storage_provider.strip().lower()
-    if provider != "gcs":
-        raise ValueError(f"Unsupported storage provider: {settings.storage_provider}")
+    settings.validate_storage_configuration()
 
-    if (
-        settings.gcp_project_id is None
-        or settings.gcs_bucket_name is None
-        or settings.gcs_public_base_url is None
-    ):
-        raise ValueError(
-            "GCS storage settings must be configured before creating the storage service."
-        )
-
-    client_factory = None
-    if settings.gcp_service_account_json:
-        import json
-
-        credential_info = json.loads(settings.gcp_service_account_json)
-
-        def create_client() -> Client:
-            """Create a GCS client from the in-memory service-account document."""
-            credentials = service_account.Credentials.from_service_account_info(
-                credential_info
+    def create_client():
+        scopes = ["https://www.googleapis.com/auth/cloud-platform"]
+        if settings.gcs_wif_audience:
+            credentials = identity_pool.Credentials(
+                audience=settings.gcs_wif_audience,
+                subject_token_type="urn:ietf:params:oauth:token-type:jwt",
+                subject_token_supplier=ModalTokenSupplier(),
+                token_url="https://sts.googleapis.com/v1/token",
+                service_account_impersonation_url=(
+                    "https://iamcredentials.googleapis.com/v1/projects/-/serviceAccounts/"
+                    f"{settings.gcs_service_account_email}:generateAccessToken"
+                ),
+                scopes=scopes,
             )
-            return Client(project=settings.gcp_project_id, credentials=credentials)
-
-        client_factory = create_client
+        elif settings.gcp_service_account_json:
+            credentials = service_account.Credentials.from_service_account_info(
+                json.loads(settings.gcp_service_account_json), scopes=scopes
+            )
+        elif settings.google_application_credentials:
+            credentials, _ = google.auth.load_credentials_from_file(
+                settings.google_application_credentials, scopes=scopes
+            )
+        else:
+            raise GoogleAuthError("Explicit credentials required")
+        return Client(project=settings.gcp_project_id, credentials=credentials)
 
     return GcsStorageService(
         project_id=settings.gcp_project_id,
         bucket_name=settings.gcs_bucket_name,
-        public_base_url=settings.gcs_public_base_url,
-        client_factory=client_factory,
+        object_prefix=settings.gcs_object_prefix,
+        client_factory=create_client,
+        service_account_email=settings.gcs_service_account_email,
     )

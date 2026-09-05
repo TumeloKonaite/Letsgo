@@ -1,3 +1,5 @@
+> Storage update: [private Modal GCS runbook](modal-gcs-storage.md) supersedes all public-bucket, credential-file materialization, and key-first assumptions below. Retain the existing bucket; do not create replacement buckets or grant public access.
+
 # Clean-start rebuild dependencies
 
 Status: dependency definition for a clean deployment. This document does not provision or deploy infrastructure.

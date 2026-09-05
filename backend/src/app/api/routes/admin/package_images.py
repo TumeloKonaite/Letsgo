@@ -65,11 +65,14 @@ def _to_response(
     object_name = image.storage_key or storage_service.extract_object_name(
         image.image_url
     )
-    url = (
-        image.image_url
-        if object_name is None
-        else storage_service.get_public_url(object_name)
-    )
+    try:
+        url = (
+            image.image_url
+            if object_name is None
+            else storage_service.get_public_url(object_name)
+        )
+    except StorageError as exc:
+        _raise_for_storage_error(exc)
     return AdminPackageImageResponse(
         id=image.id,
         package_id=image.package_id,
