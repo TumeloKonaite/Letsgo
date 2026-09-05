@@ -3,6 +3,7 @@ from decimal import Decimal
 
 from app.infrastructure.database.models import (
     Base,
+    ApplicationUser,
     Booking,
     BookingStatus,
     ContactEmailStatus,
@@ -15,6 +16,7 @@ from app.infrastructure.database.models import (
     PackageInclusionType,
     PackageItineraryItem,
     PackagePublicationStatus,
+    UserIdentity,
 )
 from app.infrastructure.database.session import (
     REQUIRED_TABLES,
@@ -30,6 +32,8 @@ def test_models_are_importable_and_registered() -> None:
     assert Package.__tablename__ == "packages"
     assert Booking.__tablename__ == "bookings"
     assert ContactSubmission.__tablename__ == "contact_submissions"
+    assert ApplicationUser.__tablename__ == "application_users"
+    assert UserIdentity.__tablename__ == "user_identities"
     assert {
         "packages",
         "package_images",
@@ -38,6 +42,8 @@ def test_models_are_importable_and_registered() -> None:
         "package_availability",
         "bookings",
         "contact_submissions",
+        "application_users",
+        "user_identities",
     }.issubset(Base.metadata.tables.keys())
     assert PackagePublicationStatus.PUBLISHED.value == "published"
     assert ContactEmailStatus.PENDING.value == "pending"

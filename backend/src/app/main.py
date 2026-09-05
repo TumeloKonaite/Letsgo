@@ -22,6 +22,7 @@ from app.domain.bookings.service import BookingService
 from app.domain.contact.service import ContactService
 from app.domain.packages.service import PackageService
 from app.infrastructure.bookings import PostgresBookingRepository
+from app.infrastructure.auth import PostgresIdentityRepository
 from app.infrastructure.contact import build_contact_repository
 from app.infrastructure.database.session import (
     create_database_engine,
@@ -110,13 +111,18 @@ def create_application(settings: Settings | None = None) -> FastAPI:
             prompt_builder=prompt_builder,
         )
         assert resolved_settings.clerk_jwt_key
+        assert resolved_settings.clerk_secret_key
         assert resolved_settings.clerk_admin_claim
         assert resolved_settings.clerk_issuer_url
         app.state.authentication_provider = ClerkAuthService(
+            secret_key=resolved_settings.clerk_secret_key,
             jwt_key=resolved_settings.clerk_jwt_key,
             issuer_url=resolved_settings.clerk_issuer_url,
             authorized_parties=resolved_settings.clerk_authorized_parties,
             admin_claim=resolved_settings.clerk_admin_claim,
+            identity_repository=PostgresIdentityRepository(
+                session_factory=session_factory
+            ),
         )
         app.state.started = True
 
