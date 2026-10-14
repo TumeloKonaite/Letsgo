@@ -157,10 +157,10 @@ Deleting an individual image already deletes its GCS object. Deleting a package 
 
 ## Authentication, origins and callbacks
 
-The repository does not yet implement Clerk. Before deployment:
+The backend implements Clerk authentication; frontend integration remains before deployment:
 
 - frontend: `ClerkProvider` obtains fresh session tokens and sends `Authorization: Bearer <token>` for protected API calls;
-- backend: Clerk session-token verification validates signature, algorithm, expiry/not-before, issuer and exact `azp`/authorized party, then maps `sub`, name/email and claims into `AuthenticatedUser`;
+- backend: Clerk's supported Python verifier validates session-token signature, algorithm, expiry/not-before and exact `azp`/authorized party; the adapter validates issuer and required claims, then maps trusted identity data into `AuthenticatedUser`;
 - authorization: keep all `/api/admin/**` operations server-protected and require the boolean custom session claim `admin == true`. Hiding UI alone is not authorization. Clerk recommends checking `authorizedParties` for cross-origin bearer sessions ([manual JWT verification](https://clerk.com/docs/guides/sessions/manual-jwt-verification)).
 
 Configure each Clerk instance with:
@@ -171,7 +171,7 @@ Configure each Clerk instance with:
 - Google as the sign-in connection; self-service public sign-up disabled unless product requirements change;
 - the `admin` custom session claim and at least one explicitly assigned admin user.
 
-Clerk’s hosted OAuth callback URL shown in the Clerk Dashboard must be registered with the Google OAuth application; do not construct or guess it. The application itself has no OAuth callback route. No Clerk webhook is required because the application has no local users/organizations table and reads identity from the verified token. Consequently there is currently no webhook endpoint or signing secret. If user synchronization is added later, reserve `POST /api/webhooks/clerk`, subscribe only to required events, verify the Svix signature using a new `CLERK_WEBHOOK_SIGNING_SECRET`, and make processing idempotent ([Clerk webhooks](https://clerk.com/docs/guides/development/webhooks/overview)).
+Clerk’s hosted OAuth callback URL shown in the Clerk Dashboard must be registered with the Google OAuth application; do not construct or guess it. The application itself has no OAuth callback route. Valid first requests provision the local user/identity mapping, so no Clerk webhook is required for authentication. If event-driven profile synchronization is added later, reserve `POST /api/webhooks/clerk`, subscribe only to required events, verify the Svix signature using a new `CLERK_WEBHOOK_SIGNING_SECRET`, and make processing idempotent ([Clerk webhooks](https://clerk.com/docs/guides/development/webhooks/overview)).
 
 ### Cross-origin contract
 

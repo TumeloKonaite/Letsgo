@@ -16,6 +16,8 @@ REQUIRED_TABLES = frozenset(
         "package_availability",
         "bookings",
         "contact_submissions",
+        "application_users",
+        "user_identities",
     }
 )
 

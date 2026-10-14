@@ -38,6 +38,17 @@ test("production build accepts an explicit HTTPS API origin", () => {
   assert.equal(environment.apiBaseUrl, "https://api.example.invalid");
 });
 
+test("Vercel build metadata is ignored while application keys remain allowlisted", () => {
+  const environment = resolveFrontendEnvironment("production", {
+    ...clerkEnvironment,
+    VITE_API_BASE_URL: "https://api.example.invalid",
+    VITE_VERCEL_ENV: "production",
+    VITE_VERCEL_GIT_COMMIT_SHA: "abc123",
+  });
+
+  assert.equal(environment.apiBaseUrl, "https://api.example.invalid");
+});
+
 test("the localhost API default is development-only", () => {
   assert.equal(
     resolveFrontendEnvironment("development", clerkEnvironment).apiBaseUrl,

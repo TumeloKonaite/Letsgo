@@ -179,6 +179,25 @@ def test_malformed_clerk_issuer_is_rejected_without_echoing_secret() -> None:
     assert secret not in str(caught.value)
 
 
+@pytest.mark.parametrize(
+    "party",
+    (
+        "https://*.vercel.app",
+        "https://travel-*.vercel.app",
+        "*",
+    ),
+)
+def test_clerk_authorized_parties_reject_wildcards(party: str) -> None:
+    settings = replace(
+        valid_settings(),
+        cors_allow_origins=(party,),
+        clerk_authorized_parties=(party,),
+    )
+
+    with pytest.raises(config.ConfigurationError, match="wildcards"):
+        settings.validate_clerk_configuration()
+
+
 def test_settings_repr_redacts_secret_bearing_values() -> None:
     settings = replace(
         valid_settings(),

@@ -211,6 +211,10 @@ def _validate_http_url(name: str, value: str, *, https_only: bool = False) -> No
 
 def _validate_origin(name: str, value: str, *, https_only: bool = False) -> None:
     """Validate a URL as an exact origin with no path or trailing slash."""
+    if "*" in value:
+        raise ConfigurationError(
+            f"{name} entries must be exact; wildcards are not allowed"
+        )
     _validate_http_url(name, value, https_only=https_only)
     parsed = urlsplit(value)
     if parsed.path not in {"", "/"} or parsed.query or parsed.fragment:
@@ -415,6 +419,12 @@ class Settings:
         for party in self.clerk_authorized_parties:
             _validate_origin(
                 "CLERK_AUTHORIZED_PARTIES", party, https_only=self.is_deployed
+            )
+        if len(set(self.clerk_authorized_parties)) != len(
+            self.clerk_authorized_parties
+        ):
+            raise ConfigurationError(
+                "CLERK_AUTHORIZED_PARTIES must not contain duplicate origins"
             )
         if set(self.clerk_authorized_parties) != set(self.cors_allow_origins):
             raise ConfigurationError("CLERK_AUTHORIZED_PARTIES must match CORS_ORIGINS")

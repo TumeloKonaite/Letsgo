@@ -14,8 +14,10 @@ from app.infrastructure.database.models.package import (
     PackageItineraryItem,
     PackagePublicationStatus,
 )
+from app.infrastructure.database.models.user import ApplicationUser, UserIdentity
 
 __all__ = [
+    "ApplicationUser",
     "Base",
     "Booking",
     "BookingStatus",
@@ -29,4 +31,5 @@ __all__ = [
     "PackageInclusionType",
     "PackageItineraryItem",
     "PackagePublicationStatus",
+    "UserIdentity",
 ]

@@ -61,7 +61,10 @@ export function resolveFrontendEnvironment(mode, environment) {
   // Validate the complete public build configuration before Vite bundles it.
   const isDevelopment = mode === "development";
   const unexpectedPublicKeys = Object.keys(environment).filter(
-    (name) => name.startsWith("VITE_") && !PUBLIC_ENVIRONMENT_KEYS.includes(name)
+    (name) =>
+      name.startsWith("VITE_") &&
+      !name.startsWith("VITE_VERCEL_") &&
+      !PUBLIC_ENVIRONMENT_KEYS.includes(name)
   );
   if (unexpectedPublicKeys.length > 0) {
     throw new Error(
