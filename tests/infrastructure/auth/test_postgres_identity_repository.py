@@ -9,7 +9,9 @@ from app.infrastructure.database.session import (
 from sqlalchemy import select
 
 
-def test_identity_is_provisioned_then_resolved_by_provider_and_subject(tmp_path) -> None:
+def test_identity_is_provisioned_then_resolved_by_provider_and_subject(
+    tmp_path,
+) -> None:
     engine = create_database_engine(f"sqlite:///{tmp_path / 'identities.db'}")
     initialize_database(engine)
     session_factory = create_session_factory(engine)
@@ -52,9 +54,7 @@ def test_equal_email_does_not_implicitly_link_different_subjects(tmp_path) -> No
     )
 
     first = repository.resolve_or_provision(
-        AuthenticatedUser(
-            subject="first", provider="clerk", email="shared@example.com"
-        )
+        AuthenticatedUser(subject="first", provider="clerk", email="shared@example.com")
     )
     second = repository.resolve_or_provision(
         AuthenticatedUser(
