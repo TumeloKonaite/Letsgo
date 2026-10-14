@@ -2,8 +2,8 @@ from datetime import date
 from decimal import Decimal
 
 from app.infrastructure.database.models import (
-    Base,
     ApplicationUser,
+    Base,
     Booking,
     BookingStatus,
     ContactEmailStatus,

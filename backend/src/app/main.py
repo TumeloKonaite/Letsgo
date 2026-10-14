@@ -21,8 +21,8 @@ from app.core.config import Settings, get_settings
 from app.domain.bookings.service import BookingService
 from app.domain.contact.service import ContactService
 from app.domain.packages.service import PackageService
-from app.infrastructure.bookings import PostgresBookingRepository
 from app.infrastructure.auth import PostgresIdentityRepository
+from app.infrastructure.bookings import PostgresBookingRepository
 from app.infrastructure.contact import build_contact_repository
 from app.infrastructure.database.session import (
     create_database_engine,

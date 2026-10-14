@@ -17,8 +17,8 @@ from app.infrastructure.database.models.package import (
 from app.infrastructure.database.models.user import ApplicationUser, UserIdentity
 
 __all__ = [
-    "Base",
     "ApplicationUser",
+    "Base",
     "Booking",
     "BookingStatus",
     "ContactEmailStatus",

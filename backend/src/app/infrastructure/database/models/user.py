@@ -7,6 +7,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.infrastructure.database.models.base import Base, TimestampMixin
 
+
 class ApplicationUser(TimestampMixin, Base):
     __tablename__ = "application_users"
 
