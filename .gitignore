@@ -8,6 +8,7 @@ wheels/
 node_modules/
 frontend/build/
 frontend/.npm-cache/
+frontend/.vercel/
 .pytest_tmp/
 .pytest_cache_local/
 
