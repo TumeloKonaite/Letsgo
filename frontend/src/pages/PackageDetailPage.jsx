@@ -1,10 +1,12 @@
 // Load a published package by slug and present its gallery and trip details.
 
-import { Link, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { useEffect, useState } from "react";
 
 import { SectionHeading } from "../components/SectionHeading";
 import { StatusPanel } from "../components/StatusPanel";
+import { useBooking } from "../booking/BookingContext.jsx";
+import { createBookingSelection, getUnavailableDepartureLabel, isDepartureBookable } from "../booking/bookingForm.js";
 import { getPackageBySlug } from "../lib/api";
 import {
   formatAvailabilityStatus,
@@ -20,6 +22,8 @@ const fallbackSlides = [
 
 export function PackageDetailPage() {
   const { slug } = useParams();
+  const navigate = useNavigate();
+  const { updateDraft } = useBooking();
   const [packageDetail, setPackageDetail] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -114,6 +118,12 @@ export function PackageDetailPage() {
 
   if (!packageDetail) {
     return null;
+  }
+
+  function startBooking(availability) {
+    if (!isDepartureBookable(availability)) return;
+    updateDraft(createBookingSelection(packageDetail, availability));
+    navigate("/booking/details");
   }
 
   const inclusionItems = packageDetail.inclusions ?? [];
@@ -311,6 +321,14 @@ export function PackageDetailPage() {
                       <span>Starts {availability.start_date}</span>
                       <span>Ends {availability.end_date}</span>
                     </div>
+                    <button
+                      className="button availability-card__action"
+                      type="button"
+                      disabled={!isDepartureBookable(availability)}
+                      onClick={() => startBooking(availability)}
+                    >
+                      {isDepartureBookable(availability) ? "Book this departure" : getUnavailableDepartureLabel(availability)}
+                    </button>
                   </article>
                 );
               })}
