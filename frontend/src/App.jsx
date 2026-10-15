@@ -3,6 +3,7 @@
 import { Navigate, Route, Routes } from "react-router-dom";
 
 import { ProtectedRoute } from "./auth/ProtectedRoute";
+import { BookingDetailsPage } from "./booking/BookingDetailsPage";
 import { Layout } from "./components/Layout";
 import { ProtectedAdminRoute } from "./components/ProtectedAdminRoute";
 import { AboutPage } from "./pages/AboutPage";
@@ -25,6 +26,7 @@ export default function App() {
         <Route path="/contact" element={<ContactPage />} />
         <Route path="/packages" element={<PackagesPage />} />
         <Route path="/packages/:slug" element={<PackageDetailPage />} />
+        <Route path="/booking/details" element={<BookingDetailsPage />} />
         <Route path="/admin/login" element={<Login />} />
         <Route element={<ProtectedRoute />}>
           <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />
