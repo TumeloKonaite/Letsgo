@@ -30,38 +30,40 @@ class BookingFixture:
 def booking_fixture(tmp_path):
     database_url = f"sqlite:///{tmp_path / 'public-bookings.db'}"
     application = create_application(settings=build_test_settings(database_url))
-    with TestClient(application) as client:
-        with application.state.db_session_factory() as session:
-            package = Package(
-                title="Public Safari",
-                slug="public-safari",
-                description="A public safari.",
-                destination="Kruger",
-                duration_days=3,
-                duration_nights=2,
-                price_from=Decimal("5000.00"),
-                is_active=True,
-                status=PackagePublicationStatus.PUBLISHED,
-                is_published=True,
-            )
-            session.add(package)
-            session.flush()
-            availability = PackageAvailability(
-                package_id=package.id,
-                start_date=date.today() + timedelta(days=5),
-                end_date=date.today() + timedelta(days=7),
-                capacity=3,
-                spots_available=3,
-                status=PackageAvailabilityStatus.AVAILABLE,
-            )
-            session.add(availability)
-            session.commit()
-            yield BookingFixture(
-                client,
-                application.state.db_session_factory,
-                package.id,
-                availability.id,
-            )
+    with (
+        TestClient(application) as client,
+        application.state.db_session_factory() as session,
+    ):
+        package = Package(
+            title="Public Safari",
+            slug="public-safari",
+            description="A public safari.",
+            destination="Kruger",
+            duration_days=3,
+            duration_nights=2,
+            price_from=Decimal("5000.00"),
+            is_active=True,
+            status=PackagePublicationStatus.PUBLISHED,
+            is_published=True,
+        )
+        session.add(package)
+        session.flush()
+        availability = PackageAvailability(
+            package_id=package.id,
+            start_date=date.today() + timedelta(days=5),
+            end_date=date.today() + timedelta(days=7),
+            capacity=3,
+            spots_available=3,
+            status=PackageAvailabilityStatus.AVAILABLE,
+        )
+        session.add(availability)
+        session.commit()
+        yield BookingFixture(
+            client,
+            application.state.db_session_factory,
+            package.id,
+            availability.id,
+        )
 
 
 def _payload(fixture: BookingFixture, **overrides):
