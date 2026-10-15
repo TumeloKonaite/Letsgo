@@ -62,8 +62,9 @@ values, they are not trusted or used. Unknown request fields are rejected.
   characters. Email ownership verification is not part of this release.
 - `customer_phone` is required, trimmed, 5 to 50 characters, and non-blank. The
   first release does not require one country's phone-number format.
-- `number_of_people` is a required positive integer. Capacity is the effective
-  upper bound; a request larger than the remaining places is a capacity conflict.
+- `number_of_people` is a required positive integer no greater than 100. A
+  request within that limit but larger than the remaining places is a capacity
+  conflict.
 - `special_requests` is optional. When supplied it is trimmed, converted to
   `null` if blank, and limited to 2,000 characters.
 - The availability must belong to `package_id`.
