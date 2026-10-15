@@ -8,6 +8,7 @@ import { BrowserRouter } from "react-router-dom";
 import { resolveFrontendEnvironment } from "../config/environment.js";
 import App from "./App.jsx";
 import { AuthProvider } from "./auth/AuthProvider.jsx";
+import { BookingProvider } from "./booking/BookingContext.jsx";
 import "./index.css";
 
 const frontendConfig = resolveFrontendEnvironment(import.meta.env.MODE, import.meta.env);
@@ -21,9 +22,11 @@ ReactDOM.createRoot(document.getElementById("root")).render(
       signOutFallbackRedirectUrl={frontendConfig.clerkSignOutFallbackRedirectUrl}
     >
       <AuthProvider>
-        <BrowserRouter>
-          <App />
-        </BrowserRouter>
+        <BookingProvider>
+          <BrowserRouter>
+            <App />
+          </BrowserRouter>
+        </BookingProvider>
       </AuthProvider>
     </ClerkProvider>
   </React.StrictMode>
