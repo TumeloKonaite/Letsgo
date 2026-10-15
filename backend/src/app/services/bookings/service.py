@@ -2,13 +2,17 @@
 
 from __future__ import annotations
 
-from app.api.schemas.bookings import BookingResponse
-from app.services.bookings.models import BookingRecord, BookingStatus
+from app.api.schemas.bookings import BookingCreateRequest, BookingResponse
+from app.services.bookings.models import BookingCreateData, BookingRecord, BookingStatus
 from app.services.bookings.ports import BookingRepository
 
 
 class BookingNotFoundError(Exception):
     """Raised when a booking is missing."""
+
+
+class InvalidBookingTransitionError(Exception):
+    """Raised when a terminal booking status would be changed."""
 
 
 class BookingService:
@@ -22,6 +26,10 @@ class BookingService:
             self._to_response(booking)
             for booking in self._repository.list(status=status)
         ]
+
+    def create_booking(self, payload: BookingCreateRequest) -> BookingResponse:
+        booking = self._repository.create(BookingCreateData(**payload.model_dump()))
+        return self._to_response(booking)
 
     def get_booking(self, booking_id: int) -> BookingResponse:
         booking = self._repository.get_by_id(booking_id)

@@ -2,10 +2,13 @@
 
 from typing import Protocol
 
-from app.services.bookings.models import BookingRecord, BookingStatus
+from app.services.bookings.models import BookingCreateData, BookingRecord, BookingStatus
 
 
 class BookingRepository(Protocol):
+    def create(self, data: BookingCreateData) -> BookingRecord:
+        """Atomically reserve departure capacity and create a booking."""
+
     def list(self, *, status: BookingStatus | None = None) -> list[BookingRecord]:
         """Return bookings, optionally filtered by status."""
 
