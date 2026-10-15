@@ -3,12 +3,12 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 
 import pytest
+from app.repository.file_storage.gcs_storage import GcsStorageService
 from app.services.packages.storage import (
     StorageAuthenticationError,
     StorageBucketNotFoundError,
     StorageError,
 )
-from app.repository.file_storage.gcs_storage import GcsStorageService
 from google.api_core.exceptions import Forbidden, NotFound
 
 

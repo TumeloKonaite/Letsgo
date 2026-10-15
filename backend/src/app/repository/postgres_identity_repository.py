@@ -9,8 +9,8 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import joinedload, sessionmaker
 
-from app.services.auth.models import AuthenticatedUser
 from app.repository.database.models.user import ApplicationUser, UserIdentity
+from app.services.auth.models import AuthenticatedUser
 
 
 class PostgresIdentityRepository:

@@ -16,13 +16,13 @@ from app.repository.database.models import (
     PackageItineraryItem,
     UserIdentity,
 )
-from app.services.bookings.models import BookingStatus
-from app.services.packages.models import PackagePublicationStatus
 from app.repository.database.session import (
     REQUIRED_TABLES,
     create_database_engine,
     initialize_database,
 )
+from app.services.bookings.models import BookingStatus
+from app.services.packages.models import PackagePublicationStatus
 from sqlalchemy import CheckConstraint, create_engine, text
 from sqlalchemy import inspect as sa_inspect
 from sqlalchemy.dialects import postgresql

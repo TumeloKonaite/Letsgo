@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
+from app.email.base import EmailDeliveryError, EmailSender
 from app.services.contact.models import ContactSubmission
 from app.services.contact.ports import ContactRepository
-from app.email.base import EmailDeliveryError, EmailSender
 
 
 class ContactServiceError(Exception):

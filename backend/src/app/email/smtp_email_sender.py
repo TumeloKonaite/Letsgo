@@ -5,8 +5,8 @@ from __future__ import annotations
 import smtplib
 from email.message import EmailMessage
 
-from app.services.contact.models import ContactSubmission
 from app.email.base import EmailDeliveryError
+from app.services.contact.models import ContactSubmission
 
 
 class SMTPEmailSender:

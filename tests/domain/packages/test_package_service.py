@@ -5,10 +5,14 @@ from decimal import Decimal
 
 import pytest
 from app.api.schemas.packages import PackageCreate, PackageUpdate
+from app.repository.in_memory_package_repository import (
+    InMemoryPackageRepository,
+)
 from app.services.packages.models import (
     PackageDetailRecord,
     PackageImageRecord,
     PackageListItemRecord,
+    PackagePublicationStatus,
     PackageRecord,
 )
 from app.services.packages.service import (
@@ -17,10 +21,6 @@ from app.services.packages.service import (
     PackageService,
 )
 from app.services.packages.storage import StorageError
-from app.services.packages.models import PackagePublicationStatus
-from app.repository.in_memory_package_repository import (
-    InMemoryPackageRepository,
-)
 
 
 def _build_service() -> PackageService:

@@ -8,6 +8,11 @@ from typing import cast
 from sqlalchemy import Select, or_, select
 from sqlalchemy.orm import Session, selectinload, sessionmaker
 
+from app.repository.database.models import (
+    Package,
+    PackageInclusion,
+    PackageItineraryItem,
+)
 from app.services.packages.models import (
     AvailabilityItemRecord,
     ItineraryItemData,
@@ -20,11 +25,6 @@ from app.services.packages.models import (
     PackageListItemRecord,
     PackagePublicationStatus,
     PackageRecord,
-)
-from app.repository.database.models import (
-    Package,
-    PackageInclusion,
-    PackageItineraryItem,
 )
 
 

@@ -3,8 +3,8 @@ from __future__ import annotations
 from unittest.mock import Mock
 
 import pytest
-from app.services.contact import ContactServiceError, ContactSubmission
 from app.main import create_application
+from app.services.contact import ContactServiceError, ContactSubmission
 from fastapi.testclient import TestClient
 
 from tests.api.clerk_auth_helpers import build_test_settings

@@ -1,11 +1,11 @@
-from app.services.auth.models import AuthenticatedUser
-from app.repository.postgres_identity_repository import PostgresIdentityRepository
 from app.repository.database.models import ApplicationUser, UserIdentity
 from app.repository.database.session import (
     create_database_engine,
     create_session_factory,
     initialize_database,
 )
+from app.repository.postgres_identity_repository import PostgresIdentityRepository
+from app.services.auth.models import AuthenticatedUser
 from sqlalchemy import select
 
 

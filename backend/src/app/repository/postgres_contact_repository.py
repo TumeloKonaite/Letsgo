@@ -6,11 +6,11 @@ from datetime import UTC, datetime
 
 from sqlalchemy.orm import Session, sessionmaker
 
-from app.services.contact.models import ContactSubmission
 from app.repository.database.models import ContactEmailStatus
 from app.repository.database.models import (
     ContactSubmission as ContactSubmissionModel,
 )
+from app.services.contact.models import ContactSubmission
 
 
 class PostgresContactRepository:

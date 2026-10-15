@@ -4,9 +4,9 @@ from dataclasses import dataclass, field
 from decimal import Decimal
 
 import pytest
-from app.services.packages.storage import StoredObject
-from app.repository.database.models import Package, PackageImage
 from app.main import create_application
+from app.repository.database.models import Package, PackageImage
+from app.services.packages.storage import StoredObject
 from fastapi.testclient import TestClient
 
 from tests.api.clerk_auth_helpers import (

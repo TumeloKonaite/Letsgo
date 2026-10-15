@@ -2,8 +2,6 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from app.services.contact import ContactSubmission
-from app.repository.postgres_contact_repository import PostgresContactRepository
 from app.repository.database.models import Base, ContactEmailStatus
 from app.repository.database.models import (
     ContactSubmission as ContactSubmissionModel,
@@ -12,6 +10,8 @@ from app.repository.database.session import (
     create_database_engine,
     create_session_factory,
 )
+from app.repository.postgres_contact_repository import PostgresContactRepository
+from app.services.contact import ContactSubmission
 
 
 def _build_repository(tmp_path: Path) -> tuple[PostgresContactRepository, object]:
