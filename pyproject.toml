@@ -31,6 +31,9 @@ dev = [
 addopts = "--basetemp=.pytest_tmp"
 cache_dir = ".pytest_cache_local"
 testpaths = ["tests"]
+markers = [
+    "postgresql: integration tests that require TEST_POSTGRESQL_DATABASE_URL",
+]
 
 [dependency-groups]
 dev = [

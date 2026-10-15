@@ -9,6 +9,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 from app.services.bookings.models import BookingStatus
 
 EMAIL_PATTERN = r"^[^@\s]+@[^@\s]+\.[^@\s]+$"
+MAX_BOOKING_GUESTS = 100
 
 
 class BookingCreateRequest(BaseModel):
@@ -21,7 +22,7 @@ class BookingCreateRequest(BaseModel):
         ..., min_length=3, max_length=320, pattern=EMAIL_PATTERN
     )
     customer_phone: str = Field(..., min_length=5, max_length=50)
-    number_of_people: int = Field(..., gt=0, strict=True)
+    number_of_people: int = Field(..., gt=0, le=MAX_BOOKING_GUESTS, strict=True)
     special_requests: str | None = Field(default=None, max_length=2000)
 
     @field_validator("special_requests", mode="before")
