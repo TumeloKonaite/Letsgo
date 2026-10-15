@@ -46,3 +46,7 @@ Deployment provisioning is intentionally outside this repository task. See [docs
 
 See [the authentication boundary](docs/authentication.md) for normalized identity
 semantics, error responses, and adding another authentication provider.
+
+See [the public package-booking contract](docs/package-booking-api.md) for the
+agreed visitor flow, API payloads, validation, atomic capacity reservation, and
+cancellation inventory rules.
