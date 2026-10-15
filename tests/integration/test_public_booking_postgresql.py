@@ -87,20 +87,17 @@ def test_simultaneous_public_bookings_cannot_oversell():
 
             def send_booking(client: TestClient, suffix: str):
                 barrier.wait(timeout=5)
-                try:
-                    return client.post(
-                        "/api/bookings",
-                        json={
-                            "package_id": package_id,
-                            "availability_id": availability_id,
-                            "customer_name": f"Concurrent Guest {suffix}",
-                            "customer_email": f"{suffix}@example.com",
-                            "customer_phone": "+27 82 555 0100",
-                            "number_of_people": 2,
-                        },
-                    )
-                except Exception as exc:  # surface worker errors as test failures
-                    pytest.fail(f"Concurrent booking request failed: {exc!r}")
+                return client.post(
+                    "/api/bookings",
+                    json={
+                        "package_id": package_id,
+                        "availability_id": availability_id,
+                        "customer_name": f"Concurrent Guest {suffix}",
+                        "customer_email": f"{suffix}@example.com",
+                        "customer_phone": "+27 82 555 0100",
+                        "number_of_people": 2,
+                    },
+                )
 
             with ThreadPoolExecutor(max_workers=2) as executor:
                 first = executor.submit(send_booking, first_client, "first")

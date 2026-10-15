@@ -5,7 +5,7 @@ from datetime import date, timedelta
 from decimal import Decimal
 
 import pytest
-from app.api.schemas.bookings import BookingCreateRequest, MAX_BOOKING_GUESTS
+from app.api.schemas.bookings import MAX_BOOKING_GUESTS, BookingCreateRequest
 from app.main import create_application
 from app.repository.database.models import Booking, Package, PackageAvailability
 from app.repository.database.models.package import PackageAvailabilityStatus
