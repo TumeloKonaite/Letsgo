@@ -1,7 +1,7 @@
-from app.domain.auth.models import AuthenticatedUser
-from app.infrastructure.auth import PostgresIdentityRepository
-from app.infrastructure.database.models import ApplicationUser, UserIdentity
-from app.infrastructure.database.session import (
+from app.services.auth.models import AuthenticatedUser
+from app.repository.postgres_identity_repository import PostgresIdentityRepository
+from app.repository.database.models import ApplicationUser, UserIdentity
+from app.repository.database.session import (
     create_database_engine,
     create_session_factory,
     initialize_database,

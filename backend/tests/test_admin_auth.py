@@ -8,11 +8,11 @@ from app.api.routes.admin.packages import router as admin_packages_router
 from app.api.routes.packages.public import router as public_packages_router
 from app.auth.clerk_auth import ClerkTokenValidationError
 from app.core.config import Settings
-from app.domain.auth.models import AuthenticatedUser
-from app.domain.packages.repository import PackageRecord
-from app.domain.packages.service import PackageService
-from app.infrastructure.database.models import PackagePublicationStatus
-from app.infrastructure.packages.in_memory_package_repository import (
+from app.services.auth.models import AuthenticatedUser
+from app.services.packages.models import PackageRecord
+from app.services.packages.service import PackageService
+from app.services.packages.models import PackagePublicationStatus
+from app.repository.in_memory_package_repository import (
     InMemoryPackageRepository,
 )
 from fastapi import APIRouter, FastAPI

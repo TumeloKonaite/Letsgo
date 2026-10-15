@@ -8,7 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 
 from app.api.schemas.packages import PackageDetail, PackageListItem
 from app.core.dependencies import get_package_service
-from app.domain.packages.service import PackageNotFoundError, PackageService
+from app.services.packages.service import PackageNotFoundError, PackageService
 
 router = APIRouter(prefix="/packages", tags=["packages"])
 

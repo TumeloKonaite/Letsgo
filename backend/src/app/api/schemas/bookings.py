@@ -6,7 +6,7 @@ from datetime import datetime
 
 from pydantic import BaseModel, Field
 
-from app.infrastructure.database.models import BookingStatus
+from app.services.bookings.models import BookingStatus
 
 
 class BookingResponse(BaseModel):

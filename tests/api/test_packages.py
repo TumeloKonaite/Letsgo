@@ -4,15 +4,15 @@ from datetime import date
 from decimal import Decimal
 
 import pytest
-from app.infrastructure.database.models import (
+from app.repository.database.models import (
     Package,
     PackageAvailability,
     PackageAvailabilityStatus,
     PackageImage,
     PackageInclusion,
     PackageItineraryItem,
-    PackagePublicationStatus,
 )
+from app.services.packages.models import PackagePublicationStatus
 from app.main import create_application
 from fastapi.testclient import TestClient
 

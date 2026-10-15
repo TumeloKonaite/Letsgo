@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import pytest
-from app.domain.packages.storage import (
+from app.services.packages.storage import (
     ImageTooLargeError,
     InvalidImageFormatError,
     build_package_image_object_name,

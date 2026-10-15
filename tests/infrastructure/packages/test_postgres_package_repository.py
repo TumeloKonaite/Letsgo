@@ -3,18 +3,18 @@ from __future__ import annotations
 from decimal import Decimal
 
 import pytest
-from app.domain.packages.repository import (
+from app.services.packages.models import (
     ItineraryItemData,
     PackageCreateData,
     PackageInclusionData,
 )
-from app.infrastructure.database.models import PackagePublicationStatus
-from app.infrastructure.database.session import (
+from app.services.packages.models import PackagePublicationStatus
+from app.repository.database.session import (
     create_database_engine,
     create_session_factory,
     initialize_database,
 )
-from app.infrastructure.packages.postgres_package_repository import (
+from app.repository.postgres_package_repository import (
     PostgresPackageRepository,
 )
 

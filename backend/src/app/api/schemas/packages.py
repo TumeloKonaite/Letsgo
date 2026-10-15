@@ -7,7 +7,7 @@ from decimal import Decimal
 
 from pydantic import BaseModel, Field, model_validator
 
-from app.infrastructure.database.models import PackagePublicationStatus
+from app.services.packages.models import PackagePublicationStatus
 
 
 class PackageImage(BaseModel):

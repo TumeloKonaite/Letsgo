@@ -4,8 +4,8 @@ from dataclasses import dataclass, field
 from decimal import Decimal
 
 import pytest
-from app.domain.packages.storage import StoredObject
-from app.infrastructure.database.models import Package, PackageImage
+from app.services.packages.storage import StoredObject
+from app.repository.database.models import Package, PackageImage
 from app.main import create_application
 from fastapi.testclient import TestClient
 

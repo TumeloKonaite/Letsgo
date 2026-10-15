@@ -43,4 +43,4 @@ dev = [
 target-version = "py312"
 
 [tool.ruff.lint]
-per-file-ignores = { "alembic/env.py" = ["E402"], "backend/src/app/infrastructure/database/models/booking.py" = ["E402"], "backend/src/app/infrastructure/database/models/package.py" = ["E402"], "tests/conftest.py" = ["E402"] }
+per-file-ignores = { "alembic/env.py" = ["E402"], "backend/src/app/repository/database/models/booking.py" = ["E402"], "backend/src/app/repository/database/models/package.py" = ["E402"], "tests/conftest.py" = ["E402"] }

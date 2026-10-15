@@ -7,7 +7,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from app.core.dependencies import get_db_session
-from app.infrastructure.database.session import verify_session_connection
+from app.repository.database.session import verify_session_connection
 
 router = APIRouter(tags=["health"])
 

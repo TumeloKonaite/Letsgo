@@ -11,16 +11,16 @@ from sqlalchemy.orm import Session
 
 from app.chatbot.service import TwinService
 from app.core.config import Settings
-from app.domain.auth.models import AuthenticatedUser
-from app.domain.auth.provider import AuthenticationError, AuthenticationProvider
-from app.domain.bookings.repository import BookingRepository
-from app.domain.bookings.service import BookingService
-from app.domain.contact.repository import ContactRepository
-from app.domain.contact.service import ContactService
-from app.domain.packages.repository import PackageRepository
-from app.domain.packages.service import PackageService
-from app.domain.packages.storage import StorageService
-from app.infrastructure.email.base import EmailSender
+from app.services.auth.models import AuthenticatedUser
+from app.services.auth.provider import AuthenticationError, AuthenticationProvider
+from app.services.bookings.ports import BookingRepository
+from app.services.bookings.service import BookingService
+from app.services.contact.ports import ContactRepository
+from app.services.contact.service import ContactService
+from app.services.packages.ports import PackageRepository
+from app.services.packages.service import PackageService
+from app.services.packages.storage import StorageService
+from app.email.base import EmailSender
 
 bearer_scheme = HTTPBearer(auto_error=False)
 

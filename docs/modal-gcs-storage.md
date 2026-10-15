@@ -189,7 +189,7 @@ Provider details and credential contents must remain out of responses and logs.
 
 ## Local validation record (2026-09-05)
 
-`pytest tests/infrastructure/storage tests/core/test_config.py tests/domain/packages`
+`pytest tests/repository/file_storage tests/core/test_config.py tests/domain/packages`
 passed: **61 tests**. Ruff checks and `git diff --check` passed. These tests use
 synthetic credentials/mocks, not a live federation exchange. The full API suite
 stalled without reporting a completed test after its fixture configuration was

@@ -14,7 +14,7 @@ from app.api.schemas.packages import (
     PackageUpdate,
 )
 from app.core.dependencies import get_package_service, require_admin
-from app.domain.packages.service import (
+from app.services.packages.service import (
     DuplicatePackageSlugError,
     PackageNotFoundError,
     PackageService,

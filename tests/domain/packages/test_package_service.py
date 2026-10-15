@@ -5,20 +5,20 @@ from decimal import Decimal
 
 import pytest
 from app.api.schemas.packages import PackageCreate, PackageUpdate
-from app.domain.packages.repository import (
+from app.services.packages.models import (
     PackageDetailRecord,
     PackageImageRecord,
     PackageListItemRecord,
     PackageRecord,
 )
-from app.domain.packages.service import (
+from app.services.packages.service import (
     DuplicatePackageSlugError,
     PackageNotFoundError,
     PackageService,
 )
-from app.domain.packages.storage import StorageError
-from app.infrastructure.database.models import PackagePublicationStatus
-from app.infrastructure.packages.in_memory_package_repository import (
+from app.services.packages.storage import StorageError
+from app.services.packages.models import PackagePublicationStatus
+from app.repository.in_memory_package_repository import (
     InMemoryPackageRepository,
 )
 

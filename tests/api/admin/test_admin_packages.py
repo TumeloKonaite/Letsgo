@@ -5,7 +5,8 @@ from decimal import Decimal
 from uuid import uuid4
 
 import pytest
-from app.infrastructure.database.models import Package, PackagePublicationStatus
+from app.repository.database.models import Package
+from app.services.packages.models import PackagePublicationStatus
 from app.main import create_application
 from fastapi.testclient import TestClient
 

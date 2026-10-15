@@ -18,22 +18,20 @@ from app.chatbot.prompt_builder import TwinPromptBuilder
 from app.chatbot.resource_loader import ResourceLoader
 from app.chatbot.service import TwinResourceLoaders, TwinService
 from app.core.config import Settings, get_settings
-from app.domain.bookings.service import BookingService
-from app.domain.contact.service import ContactService
-from app.domain.packages.service import PackageService
-from app.infrastructure.auth import PostgresIdentityRepository
-from app.infrastructure.bookings import PostgresBookingRepository
-from app.infrastructure.contact import build_contact_repository
-from app.infrastructure.database.session import (
+from app.services.bookings.service import BookingService
+from app.services.contact.service import ContactService
+from app.services.packages.service import PackageService
+from app.repository.database.session import (
     create_database_engine,
     create_session_factory,
     initialize_database,
 )
-from app.infrastructure.email.smtp_email_sender import SMTPEmailSender
-from app.infrastructure.packages.postgres_package_repository import (
-    PostgresPackageRepository,
-)
-from app.infrastructure.storage import create_storage_service
+from app.email.smtp_email_sender import SMTPEmailSender
+from app.repository.contact_repository_factory import build_contact_repository
+from app.repository.file_storage import create_storage_service
+from app.repository.postgres_booking_repository import PostgresBookingRepository
+from app.repository.postgres_identity_repository import PostgresIdentityRepository
+from app.repository.postgres_package_repository import PostgresPackageRepository
 
 
 def create_application(settings: Settings | None = None) -> FastAPI:
