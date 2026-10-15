@@ -9,7 +9,11 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from app.api.schemas.bookings import BookingResponse, BookingStatusUpdateRequest
 from app.core.dependencies import get_booking_service, require_admin
 from app.services.bookings.models import BookingStatus
-from app.services.bookings.service import BookingNotFoundError, BookingService
+from app.services.bookings.service import (
+    BookingNotFoundError,
+    BookingService,
+    InvalidBookingTransitionError,
+)
 
 router = APIRouter(
     prefix="/admin/bookings",
@@ -23,6 +27,11 @@ def _raise_for_booking_error(exc: Exception) -> None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Booking not found",
+        ) from exc
+    if isinstance(exc, InvalidBookingTransitionError):
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Cancelled bookings cannot change status",
         ) from exc
     raise exc
 
@@ -54,7 +63,7 @@ def update_booking_status(
 ) -> BookingResponse:
     try:
         return service.update_booking_status(booking_id, payload.status)
-    except BookingNotFoundError as exc:
+    except (BookingNotFoundError, InvalidBookingTransitionError) as exc:
         _raise_for_booking_error(exc)
 
 

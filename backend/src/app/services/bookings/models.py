@@ -16,6 +16,17 @@ class BookingStatus(StrEnum):
 
 
 @dataclass(frozen=True, slots=True)
+class BookingCreateData:
+    package_id: int
+    availability_id: int
+    customer_name: str
+    customer_email: str
+    customer_phone: str
+    number_of_people: int
+    special_requests: str | None
+
+
+@dataclass(frozen=True, slots=True)
 class BookingRecord:
     id: int
     package_id: int
