@@ -4,8 +4,9 @@ from dataclasses import dataclass
 from decimal import Decimal
 
 import pytest
-from app.infrastructure.database.models import Booking, BookingStatus, Package
 from app.main import create_application
+from app.repository.database.models import Booking, Package
+from app.services.bookings.models import BookingStatus
 from fastapi.testclient import TestClient
 
 from tests.api.clerk_auth_helpers import (

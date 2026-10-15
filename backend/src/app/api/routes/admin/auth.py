@@ -7,7 +7,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends
 
 from app.core.dependencies import get_current_user
-from app.domain.auth.models import AuthenticatedUser
+from app.services.auth.models import AuthenticatedUser
 
 router = APIRouter(prefix="/admin/auth", tags=["admin-auth"])
 

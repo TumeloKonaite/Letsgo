@@ -20,7 +20,8 @@ from sqlalchemy.orm import Session, sessionmaker
 from app.api.schemas.packages import AdminPackageImageResponse
 from app.core.config import Settings
 from app.core.dependencies import get_settings, get_storage_service, require_admin
-from app.domain.packages.storage import (
+from app.repository.database.models import Package, PackageImage
+from app.services.packages.storage import (
     ImageTooLargeError,
     InvalidImageFormatError,
     StorageAuthenticationError,
@@ -30,7 +31,6 @@ from app.domain.packages.storage import (
     build_package_image_object_name,
     validate_image_upload,
 )
-from app.infrastructure.database.models import Package, PackageImage
 
 router = APIRouter(
     prefix="/admin/packages",

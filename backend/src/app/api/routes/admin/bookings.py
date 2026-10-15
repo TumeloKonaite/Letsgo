@@ -8,8 +8,8 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 
 from app.api.schemas.bookings import BookingResponse, BookingStatusUpdateRequest
 from app.core.dependencies import get_booking_service, require_admin
-from app.domain.bookings.service import BookingNotFoundError, BookingService
-from app.infrastructure.database.models import BookingStatus
+from app.services.bookings.models import BookingStatus
+from app.services.bookings.service import BookingNotFoundError, BookingService
 
 router = APIRouter(
     prefix="/admin/bookings",

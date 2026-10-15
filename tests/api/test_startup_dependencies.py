@@ -16,7 +16,7 @@ def test_application_startup_does_not_require_external_credentials(
         raise AssertionError("storage client should not be created during startup")
 
     monkeypatch.setattr(
-        "app.infrastructure.storage.gcs_storage.Client",
+        "app.repository.file_storage.gcs_storage.Client",
         _fail_client_creation,
     )
     with TestClient(application) as client:

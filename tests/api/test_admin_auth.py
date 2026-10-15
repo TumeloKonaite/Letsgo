@@ -4,8 +4,8 @@ from dataclasses import dataclass
 from decimal import Decimal
 
 import pytest
-from app.infrastructure.database.models import Package, PackageImage
 from app.main import create_application
+from app.repository.database.models import Package, PackageImage
 from fastapi.testclient import TestClient
 
 from tests.api.clerk_auth_helpers import (

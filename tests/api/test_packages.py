@@ -4,16 +4,16 @@ from datetime import date
 from decimal import Decimal
 
 import pytest
-from app.infrastructure.database.models import (
+from app.main import create_application
+from app.repository.database.models import (
     Package,
     PackageAvailability,
     PackageAvailabilityStatus,
     PackageImage,
     PackageInclusion,
     PackageItineraryItem,
-    PackagePublicationStatus,
 )
-from app.main import create_application
+from app.services.packages.models import PackagePublicationStatus
 from fastapi.testclient import TestClient
 
 from tests.api.clerk_auth_helpers import build_test_settings

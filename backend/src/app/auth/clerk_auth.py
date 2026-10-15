@@ -8,9 +8,9 @@ from typing import Any
 from clerk_backend_api import AuthenticateRequestOptions, authenticate_request
 from clerk_backend_api.security.types import TokenVerificationErrorReason
 
-from app.domain.auth.models import AuthenticatedUser
-from app.domain.auth.provider import AuthenticationError
-from app.domain.auth.repository import IdentityRepository
+from app.services.auth.models import AuthenticatedUser
+from app.services.auth.ports import IdentityRepository
+from app.services.auth.provider import AuthenticationError
 
 
 class ClerkTokenValidationError(AuthenticationError):

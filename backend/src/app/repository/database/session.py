@@ -1,0 +1,189 @@
+"""Create database sessions and initialize SQLite or verify a migrated server schema."""
+
+from __future__ import annotations
+
+from sqlalchemy import Engine, create_engine, inspect, text
+from sqlalchemy.orm import Session, sessionmaker
+
+from app.repository.database.models import Base
+
+REQUIRED_TABLES = frozenset(
+    {
+        "packages",
+        "package_images",
+        "package_itinerary_items",
+        "package_inclusions",
+        "package_availability",
+        "bookings",
+        "contact_submissions",
+        "application_users",
+        "user_identities",
+    }
+)
+
+
+def create_database_engine(database_url: str) -> Engine:
+    """Create an engine with safe connection options for the selected database."""
+    connect_args: dict[str, bool] = {}
+    engine_kwargs: dict[str, object] = {}
+    if database_url.startswith("sqlite"):
+        connect_args["check_same_thread"] = False
+    else:
+        # Pre-ping each checkout to fail fast on stale pooled connections.
+        engine_kwargs["pool_pre_ping"] = True
+
+    return create_engine(database_url, connect_args=connect_args, **engine_kwargs)
+
+
+def create_session_factory(engine: Engine) -> sessionmaker[Session]:
+    """Create the session factory shared by request-scoped sessions."""
+    return sessionmaker(
+        bind=engine, autoflush=False, autocommit=False, expire_on_commit=False
+    )
+
+
+def initialize_database(engine: Engine) -> None:
+    """Initialize local SQLite or verify a migrated PostgreSQL schema."""
+    if engine.dialect.name == "sqlite":
+        Base.metadata.create_all(engine)
+        _ensure_package_image_storage_key_column(engine)
+        _ensure_package_itinerary_columns(engine)
+        _migrate_legacy_package_statuses(engine)
+        _migrate_legacy_booking_statuses(engine)
+        return
+
+    _verify_database_connection(engine)
+    _verify_required_tables(engine)
+
+
+def _verify_database_connection(engine: Engine) -> None:
+    """Fail startup when the configured database cannot execute a simple query."""
+    with engine.connect() as connection:
+        connection.execute(text("SELECT 1"))
+
+
+def verify_session_connection(session: Session) -> None:
+    """Check that an existing request session can reach the database."""
+    session.execute(text("SELECT 1"))
+
+
+def _verify_required_tables(engine: Engine) -> None:
+    """Fail startup if PostgreSQL migrations have not created required tables."""
+    existing_tables = set(inspect(engine).get_table_names())
+    missing_tables = sorted(REQUIRED_TABLES - existing_tables)
+    if not missing_tables:
+        return
+
+    missing = ", ".join(missing_tables)
+    raise RuntimeError(
+        "Database schema is missing required tables. "
+        "Run `alembic upgrade head` before starting the application. "
+        f"Missing tables: {missing}"
+    )
+
+
+def _ensure_package_image_storage_key_column(engine: Engine) -> None:
+    """Keep older development SQLite databases compatible with image storage."""
+    inspector = inspect(engine)
+    if "package_images" not in inspector.get_table_names():
+        return
+
+    existing_columns = {
+        column["name"] for column in inspector.get_columns("package_images")
+    }
+    if "storage_key" in existing_columns:
+        return
+
+    with engine.begin() as connection:
+        connection.execute(
+            text("ALTER TABLE package_images ADD COLUMN storage_key VARCHAR(1024)")
+        )
+
+
+def _migrate_legacy_booking_statuses(engine: Engine) -> None:
+    """Normalize legacy booking states in local SQLite databases."""
+    inspector = inspect(engine)
+    if "bookings" not in inspector.get_table_names():
+        return
+
+    with engine.begin() as connection:
+        connection.execute(
+            text("UPDATE bookings SET status = 'new' WHERE status = 'pending'")
+        )
+        connection.execute(
+            text("UPDATE bookings SET status = 'closed' WHERE status = 'rejected'")
+        )
+
+
+def _ensure_package_itinerary_columns(engine: Engine) -> None:
+    """Add structured itinerary fields to older local SQLite databases."""
+    inspector = inspect(engine)
+    if "package_itinerary_items" not in inspector.get_table_names():
+        return
+
+    existing_columns = {
+        column["name"] for column in inspector.get_columns("package_itinerary_items")
+    }
+
+    with engine.begin() as connection:
+        if "duration" not in existing_columns:
+            connection.execute(
+                text(
+                    "ALTER TABLE package_itinerary_items ADD COLUMN duration VARCHAR(100)"
+                )
+            )
+        if "updated_at" not in existing_columns:
+            connection.execute(
+                text(
+                    "ALTER TABLE package_itinerary_items ADD COLUMN updated_at DATETIME"
+                )
+            )
+            connection.execute(
+                text(
+                    """
+                    UPDATE package_itinerary_items
+                    SET updated_at = COALESCE(created_at, CURRENT_TIMESTAMP)
+                    WHERE updated_at IS NULL
+                    """
+                )
+            )
+        if {"day_number", "sort_order"}.issubset(existing_columns):
+            connection.execute(
+                text(
+                    """
+                    WITH ordered AS (
+                        SELECT
+                            id,
+                            ROW_NUMBER() OVER (
+                                PARTITION BY package_id
+                                ORDER BY day_number ASC, sort_order ASC, id ASC
+                            ) - 1 AS next_sort_order
+                        FROM package_itinerary_items
+                    )
+                    UPDATE package_itinerary_items
+                    SET sort_order = (
+                        SELECT next_sort_order
+                        FROM ordered
+                        WHERE ordered.id = package_itinerary_items.id
+                    )
+                    """
+                )
+            )
+
+
+def _migrate_legacy_package_statuses(engine: Engine) -> None:
+    """Normalize legacy package states in local SQLite databases."""
+    inspector = inspect(engine)
+    if "packages" not in inspector.get_table_names():
+        return
+
+    with engine.begin() as connection:
+        connection.execute(
+            text("UPDATE packages SET status = 'draft' WHERE status = 'DRAFT'")
+        )
+        connection.execute(
+            text("UPDATE packages SET status = 'published' WHERE status = 'PUBLISHED'")
+        )
+        connection.execute(
+            text("UPDATE packages SET status = 'archived' WHERE status = 'ARCHIVED'")
+        )

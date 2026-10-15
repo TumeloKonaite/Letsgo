@@ -8,7 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 
 from app.api.schemas.contact import ContactRequest, ContactResponse
 from app.core.dependencies import get_contact_service
-from app.domain.contact import ContactService, ContactServiceError, ContactSubmission
+from app.services.contact import ContactService, ContactServiceError, ContactSubmission
 
 router = APIRouter(prefix="/contact", tags=["contact"])
 

@@ -3,8 +3,8 @@ from typing import Annotated
 import pytest
 from app.api.routes.admin.auth import router
 from app.core.dependencies import get_authentication_provider, require_admin
-from app.domain.auth.models import AuthenticatedUser
-from app.domain.auth.provider import AuthenticationError
+from app.services.auth.models import AuthenticatedUser
+from app.services.auth.provider import AuthenticationError
 from fastapi import Depends, FastAPI
 from fastapi.testclient import TestClient
 

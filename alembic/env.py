@@ -15,7 +15,7 @@ if str(BACKEND_SRC) not in sys.path:
     sys.path.insert(0, str(BACKEND_SRC))
 
 from app.core.config import Settings
-from app.infrastructure.database.models import Base
+from app.repository.database.models import Base
 
 config = context.config
 

@@ -4,7 +4,7 @@ from dataclasses import dataclass, field
 
 from app.auth.clerk_auth import ClerkTokenExpiredError, ClerkTokenValidationError
 from app.core.config import Settings
-from app.domain.auth.models import AuthenticatedUser
+from app.services.auth.models import AuthenticatedUser
 
 TEST_CLERK_ADMIN_CLAIM = "admin"
 TEST_ADMIN_TOKEN = "admin-token"
